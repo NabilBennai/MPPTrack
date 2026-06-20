@@ -89,7 +89,6 @@ export function renderClassement(
     : contestInfo
       ? `<div class="px-4 py-2.5 text-xs bg-slate-800/40 border-b border-slate-700/40 flex items-center justify-between gap-4 flex-wrap">
            <span class="font-semibold text-slate-200">${esc(contestInfo.title)}</span>
-           <span class="text-slate-400 shrink-0">${contestInfo.totalUsers} participants · Rang : <strong class="text-yellow-400">#${contestInfo.userRanking}</strong> · ${contestInfo.userTotalPoints} pts</span>
          </div>`
       : "";
 
@@ -181,36 +180,56 @@ export function renderClassement(
 // ---------------------------------------------------------------------------
 export function renderStats(stats: DepartmentStats[]): string {
   if (stats.length === 0) {
-    return `<p class="col-span-4 text-slate-500 text-center py-6 text-sm">Aucune statistique disponible.</p>`;
+    return `<p class="text-slate-500 text-center py-6 text-sm">Aucune statistique disponible.</p>`;
   }
 
   const pillClass: Record<DepartmentCode, string> = {
     MT: "fp-MT", ES: "fp-ES", TD: "fp-TD", WD: "fp-WD", UNKNOWN: "fp-UNK",
   };
 
+  const accentColor: Record<DepartmentCode, string> = {
+    MT:      "text-blue-400    border-blue-700    hover:bg-blue-950/40   bg-blue-950/20",
+    ES:      "text-purple-400  border-purple-700  hover:bg-purple-950/40 bg-purple-950/20",
+    TD:      "text-emerald-400 border-emerald-700 hover:bg-emerald-950/40 bg-emerald-950/20",
+    WD:      "text-orange-400  border-orange-700  hover:bg-orange-950/40 bg-orange-950/20",
+    UNKNOWN: "text-slate-400   border-slate-600   hover:bg-slate-800/40  bg-slate-800/20",
+  };
+
   const cards = stats.map((s) => {
-    const pill = pillClass[s.departmentCode] ?? "fp-UNK";
-    const best = s.bestPlayer;
+    const pill  = pillClass[s.departmentCode] ?? "fp-UNK";
+    const color = accentColor[s.departmentCode] ?? accentColor.UNKNOWN;
+    const best  = s.bestPlayer;
     return `
       <button
         type="button"
-        class="filter-pill ${pill} text-left rounded-xl border bg-gradient-to-br ${deptGradient(s.departmentCode)} p-4 transition-all cursor-pointer"
+        class="filter-pill ${pill} group text-left rounded-xl border ${color} p-5 transition-colors cursor-pointer w-full"
         data-dept="${s.departmentCode}"
         onclick="setActivePill('${s.departmentCode}')"
         hx-get="/classement?department=${s.departmentCode}"
         hx-target="#classement-container"
         hx-swap="innerHTML"
       >
-        <div class="flex items-start justify-between gap-2 mb-2">
-          <span class="${deptBadge(s.departmentCode)} text-[11px] font-semibold px-2 py-0.5 rounded-full leading-snug shrink-0">${esc(s.departmentName)}</span>
-          <span class="text-xl font-black tabular-nums leading-none">${s.playerCount}</span>
+        <div class="text-xs font-semibold uppercase tracking-wider mb-3 ${color.split(" ")[0]}">${esc(s.departmentName)}</div>
+        <div class="flex items-end justify-between gap-2 mb-3">
+          <div>
+            <div class="text-3xl font-black tabular-nums leading-none text-slate-100">${s.playerCount}</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">participants</div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg font-bold tabular-nums text-slate-200 leading-none">${s.averagePoints.toLocaleString("fr-FR")}</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">pts moy.</div>
+          </div>
         </div>
-        <div class="text-xs text-slate-400">Moy. <span class="text-slate-200 font-semibold">${s.averagePoints.toLocaleString("fr-FR")}</span> pts</div>
-        ${best ? `<div class="text-[11px] text-slate-600 mt-1.5 truncate" title="${esc(best.pseudo)}">🏆 ${esc(best.pseudo)}</div>` : ""}
+        ${best ? `
+        <div class="border-t border-slate-700/50 pt-2.5 flex items-center gap-2">
+          ${avatarImg(best, "w-5 h-5 shrink-0")}
+          <span class="text-xs text-slate-400 truncate" title="${esc(best.pseudo)}">${esc(best.pseudo)}</span>
+          <span class="text-xs text-yellow-500 ml-auto shrink-0">${best.points.toLocaleString("fr-FR")} pts</span>
+        </div>` : ""}
       </button>`;
   }).join("");
 
-  return `<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">${cards}</div>`;
+  return `<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">${cards}</div>`;
 }
 
 // ---------------------------------------------------------------------------
