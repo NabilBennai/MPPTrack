@@ -6,7 +6,7 @@ import mppRouter from "./routes/mpp.routes.js";
 const app = express();
 const PORT = process.env["PORT"] ?? 3000;
 
-app.use(express.static("public"));
+app.use(express.static(path.resolve(__dirname, "..", "public")));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
