@@ -41,7 +41,8 @@ const MOCK_PLAYERS: MppPlayer[] = [
   { id: "7",  pseudo: "TD Mehdi",    rank: 5,  points: 890,  departmentCode: "TD", departmentName: "TDi",      exactScores: 6,  goodResults: 22, playedPredictions: 40 },
   { id: "8",  pseudo: "TD_Sara",     rank: 7,  points: 760,  departmentCode: "TD", departmentName: "TDi",      exactScores: 5,  goodResults: 18, playedPredictions: 38 },
   { id: "9",  pseudo: "TD Léa",      rank: 9,  points: 640,  departmentCode: "TD", departmentName: "TDi",      exactScores: 4,  goodResults: 16, playedPredictions: 35 },
-  { id: "10", pseudo: "RandomPlayer", rank: 10, points: 500, departmentCode: "UNKNOWN", departmentName: "Inconnu", exactScores: 3, goodResults: 15, playedPredictions: 30 },
+  { id: "10", pseudo: "WD_Player1",   rank: 10, points: 580, departmentCode: "WD", departmentName: "Winddle", exactScores: 4, goodResults: 16, playedPredictions: 32 },
+  { id: "11", pseudo: "RandomPlayer", rank: 11, points: 500, departmentCode: "UNKNOWN", departmentName: "Inconnu", exactScores: 3, goodResults: 15, playedPredictions: 30 },
 ];
 
 export function useMock(): boolean {

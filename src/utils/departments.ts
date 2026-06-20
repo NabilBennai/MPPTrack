@@ -9,6 +9,7 @@ const DEPARTMENT_MAP: Record<string, DepartmentInfo> = {
   MT: { code: "MT", name: "MyTower" },
   ES: { code: "ES", name: "e-SCM" },
   TD: { code: "TD", name: "TDi" },
+  WD: { code: "WD", name: "Winddle" },
 };
 
 const UNKNOWN: DepartmentInfo = { code: "UNKNOWN", name: "Inconnu" };

@@ -26,8 +26,20 @@ function deptBadge(code: DepartmentCode): string {
     case "MT": return "bg-blue-900 text-blue-300 border border-blue-700";
     case "ES": return "bg-purple-900 text-purple-300 border border-purple-700";
     case "TD": return "bg-emerald-900 text-emerald-300 border border-emerald-700";
+    case "WD": return "bg-orange-900 text-orange-300 border border-orange-700";
     default:   return "bg-slate-700 text-slate-400 border border-slate-600";
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers avatar
+// ---------------------------------------------------------------------------
+function avatarCell(p: MppPlayer, size = "w-8 h-8"): string {
+  const initials = esc(p.pseudo.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase() || "??");
+  if (p.avatarUrl) {
+    return `<img src="${esc(p.avatarUrl)}" alt="${esc(p.pseudo)}" class="${size} rounded-full object-cover bg-slate-700" loading="lazy">`;
+  }
+  return `<div class="${size} rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0">${initials}</div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,8 +50,10 @@ export function renderClassement(
   updatedAt: string,
   usingMock: boolean,
   contestInfo?: ContestInfo | null,
+  departmentFilter?: string,
 ): string {
-  const count = players.length;
+  const count     = players.length;
+  const isFiltered = Boolean(departmentFilter && departmentFilter !== "");
 
   const mockBanner = usingMock
     ? `<div class="px-4 py-2 text-xs text-amber-400 bg-amber-950/50 border-b border-amber-800/50 flex items-center gap-2">
@@ -61,18 +75,31 @@ export function renderClassement(
     `;
   }
 
-  const rows = players.map((p) => `
-    <tr class="border-b border-slate-700/60 hover:bg-slate-800/50 transition-colors">
-      <td class="px-4 py-3 font-bold ${p.rank <= 3 ? "text-yellow-400" : "text-slate-300"}">${p.rank}</td>
-      <td class="px-4 py-3 font-semibold">${esc(p.pseudo)}</td>
+  const rows = players.map((p, i) => {
+    const deptRank  = i + 1;
+    const globalRankCell = isFiltered
+      ? `<td class="px-3 py-3 text-slate-400 text-sm">#${p.rank}</td>`
+      : `<td class="px-4 py-3 font-bold ${p.rank <= 3 ? "text-yellow-400" : "text-slate-300"}">${p.rank}</td>`;
+    const deptRankCell = isFiltered
+      ? `<td class="px-3 py-3 font-bold ${deptRank <= 3 ? "text-yellow-400" : "text-slate-300"}">${deptRank}</td>`
+      : "";
+    const deptCell = isFiltered ? "" : `
       <td class="px-4 py-3">
         <span class="${deptBadge(p.departmentCode)} text-xs font-medium px-2 py-0.5 rounded-full">
           ${esc(p.departmentName)}
         </span>
-      </td>
+      </td>`;
+
+    return `
+    <tr class="border-b border-slate-700/60 hover:bg-slate-800/50 transition-colors">
+      ${globalRankCell}
+      ${deptRankCell}
+      <td class="px-3 py-3">${avatarCell(p)}</td>
+      <td class="px-4 py-3 font-semibold">${esc(p.pseudo)}</td>
+      ${deptCell}
       <td class="px-4 py-3 text-right font-bold text-blue-400">${p.points}</td>
-      <td class="px-4 py-3 text-right text-green-400">${fmt(p.exactScores)}</td>
       <td class="px-4 py-3 text-right text-slate-300">${fmt(p.goodResults)}</td>
+      <td class="px-4 py-3 text-right text-green-400">${fmt(p.exactScores)}</td>
       <td class="px-4 py-3 text-right text-slate-400">${fmt(p.playedPredictions)}</td>
       <td class="px-4 py-3 text-center">
         <button
@@ -82,8 +109,13 @@ export function renderClassement(
           hx-swap="innerHTML"
         >Voir</button>
       </td>
-    </tr>
-  `).join("");
+    </tr>`;
+  }).join("");
+
+  const rankHeader = isFiltered
+    ? `<th class="px-3 py-3 w-16">Général</th><th class="px-3 py-3 w-16">Dept</th>`
+    : `<th class="px-4 py-3 w-16">Rang</th>`;
+  const deptHeader = isFiltered ? "" : `<th class="px-4 py-3">Département</th>`;
 
   return `
     ${mockBanner}
@@ -94,13 +126,14 @@ export function renderClassement(
       <table class="w-full text-sm text-left">
         <thead class="text-xs uppercase text-slate-400 bg-slate-800/60 border-b border-slate-700">
           <tr>
-            <th class="px-4 py-3 w-16">Rang</th>
+            ${rankHeader}
+            <th class="px-3 py-3 w-12"></th>
             <th class="px-4 py-3">Pseudo</th>
-            <th class="px-4 py-3">Département</th>
+            ${deptHeader}
             <th class="px-4 py-3 text-right">Points</th>
-            <th class="px-4 py-3 text-right">Exacts</th>
-            <th class="px-4 py-3 text-right">Bons résultats</th>
-            <th class="px-4 py-3 text-right">Pronostics</th>
+            <th class="px-4 py-3 text-right">Bons pronos</th>
+            <th class="px-4 py-3 text-right">Scores exacts</th>
+            <th class="px-4 py-3 text-right">Joués</th>
             <th class="px-4 py-3 text-center w-20">Détail</th>
           </tr>
         </thead>
@@ -152,11 +185,14 @@ export function renderPlayerDetail(player: MppPlayer): string {
   return `
     <div class="rounded-lg border border-slate-600 bg-slate-900 p-6">
       <div class="flex items-start justify-between mb-5">
-        <div class="flex flex-col gap-2">
-          <h3 class="text-xl font-bold">${esc(player.pseudo)}</h3>
-          <span class="${deptBadge(player.departmentCode)} text-xs font-semibold px-2.5 py-1 rounded-full self-start">
-            ${esc(player.departmentName)}
-          </span>
+        <div class="flex items-center gap-4">
+          ${avatarCell(player, "w-14 h-14 text-lg")}
+          <div class="flex flex-col gap-2">
+            <h3 class="text-xl font-bold">${esc(player.pseudo)}</h3>
+            <span class="${deptBadge(player.departmentCode)} text-xs font-semibold px-2.5 py-1 rounded-full self-start">
+              ${esc(player.departmentName)}
+            </span>
+          </div>
         </div>
         <div class="text-3xl font-extrabold text-yellow-400">${rankLabel}</div>
       </div>
@@ -166,12 +202,12 @@ export function renderPlayerDetail(player: MppPlayer): string {
           <div class="text-slate-400 text-xs mt-1">Points</div>
         </div>
         <div class="bg-slate-800 rounded-lg p-3 text-center">
-          <div class="text-2xl font-bold text-green-400">${fmt(player.exactScores)}</div>
-          <div class="text-slate-400 text-xs mt-1">Scores exacts</div>
+          <div class="text-2xl font-bold text-slate-300">${fmt(player.goodResults)}</div>
+          <div class="text-slate-400 text-xs mt-1">Bons pronos</div>
         </div>
         <div class="bg-slate-800 rounded-lg p-3 text-center">
-          <div class="text-2xl font-bold text-slate-300">${fmt(player.goodResults)}</div>
-          <div class="text-slate-400 text-xs mt-1">Bons résultats</div>
+          <div class="text-2xl font-bold text-green-400">${fmt(player.exactScores)}</div>
+          <div class="text-slate-400 text-xs mt-1">Scores exacts</div>
         </div>
         <div class="bg-slate-800 rounded-lg p-3 text-center">
           <div class="text-2xl font-bold text-slate-400">${fmt(player.playedPredictions)}</div>

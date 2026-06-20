@@ -1,5 +1,5 @@
-export type DepartmentCode = "MT" | "ES" | "TD" | "UNKNOWN";
-export type DepartmentName = "MyTower" | "e-SCM" | "TDi" | "Inconnu";
+export type DepartmentCode = "MT" | "ES" | "TD" | "WD" | "UNKNOWN";
+export type DepartmentName = "MyTower" | "e-SCM" | "TDi" | "Winddle" | "Inconnu";
 
 // ---------------------------------------------------------------------------
 // Réponse brute GET /user-contests

@@ -52,7 +52,7 @@ export async function mppClassementHandler(req: Request, res: Response): Promise
     const isMock      = useMock();
     const contestInfo = isMock ? null : await getContestInfo().catch(() => null);
 
-    res.send(renderClassement(filtered, formatDate(), isMock, contestInfo));
+    res.send(renderClassement(filtered, formatDate(), isMock, contestInfo, department));
   } catch (_err) {
     res.status(500).send(renderError("Erreur lors du chargement du classement."));
   }
