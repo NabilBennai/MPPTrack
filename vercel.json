@@ -1,5 +1,5 @@
 {
-  "buildCommand": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css",
+  "buildCommand": "npm run build",
   "functions": {
     "api/index.ts": {
       "includeFiles": "public/**,src/views/**"
