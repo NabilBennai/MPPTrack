@@ -102,73 +102,9 @@ function expandBtn(playerId: string, open: boolean): string {
   >${open ? "▲" : "▼"}</button>`;
 }
 
-// ---------------------------------------------------------------------------
-// Pagination helper
-// ---------------------------------------------------------------------------
-function paginationBar(
-  current: number,
-  total: number,
-  totalRows: number,
-  pageSize: number,
-  deptParam: string,
-): string {
-  if (total <= 1) return "";
-
-  const pageUrl = (n: number) =>
-    deptParam
-      ? `/classement?department=${deptParam}&page=${n}`
-      : `/classement?page=${n}`;
-
-  const pageBtn = (n: number, label?: string) => {
-    const active = n === current;
-    const s = active
-      ? "background:rgba(124,107,248,0.2);border-color:rgba(124,107,248,0.5);color:#a99bff;cursor:default;box-shadow:0 0 10px rgba(124,107,248,0.2)"
-      : "background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.07);color:#5c5578;cursor:pointer";
-    const htmx = active ? "" : `hx-get="${pageUrl(n)}" hx-target="#classement-container" hx-swap="innerHTML"`;
-    return `<button ${htmx} style="${s};width:30px;height:30px;border-radius:8px;border-width:1px;font-size:12px;font-weight:700;font-family:'Manrope',sans-serif;display:inline-flex;align-items:center;justify-content:center;transition:all 0.12s">${label ?? n}</button>`;
-  };
-
-  const navBtn = (n: number, label: string, disabled: boolean) => {
-    const s = disabled
-      ? "background:transparent;border-color:rgba(255,255,255,0.04);color:#2e2850;cursor:not-allowed"
-      : "background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.07);color:#5c5578;cursor:pointer";
-    const htmx = disabled ? "" : `hx-get="${pageUrl(n)}" hx-target="#classement-container" hx-swap="innerHTML"`;
-    return `<button ${htmx} ${disabled ? "disabled" : ""} style="${s};padding:0 12px;height:30px;border-radius:8px;border-width:1px;font-size:12px;font-weight:700;font-family:'Manrope',sans-serif;display:inline-flex;align-items:center;justify-content:center;transition:all 0.12s">${label}</button>`;
-  };
-
-  const MAX_VISIBLE = 5;
-  let pages: (number | "…")[] = [];
-  if (total <= MAX_VISIBLE + 2) {
-    pages = Array.from({ length: total }, (_, i) => i + 1);
-  } else {
-    const half = Math.floor(MAX_VISIBLE / 2);
-    let start = Math.max(2, current - half);
-    let end   = Math.min(total - 1, start + MAX_VISIBLE - 1);
-    if (end - start < MAX_VISIBLE - 1) start = Math.max(2, end - MAX_VISIBLE + 1);
-    pages = [1];
-    if (start > 2) pages.push("…");
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (end < total - 1) pages.push("…");
-    pages.push(total);
-  }
-
-  const start = (current - 1) * pageSize + 1;
-  const end   = Math.min(current * pageSize, totalRows);
-
-  return `
-    <div style="position:sticky;bottom:0;z-index:10;background:#12101c;display:flex;align-items:center;justify-content:center;padding:10px 20px;border-top:1px solid rgba(255,255,255,0.06);gap:16px;flex-wrap:wrap">
-      ${navBtn(current - 1, "←", current === 1)}
-      ${pages.map((p) => p === "…"
-        ? `<span style="width:20px;text-align:center;color:#243040;font-size:12px">…</span>`
-        : pageBtn(p as number)
-      ).join("")}
-      ${navBtn(current + 1, "→", current === total)}
-      <span style="font-size:11px;color:#2e2850;font-family:'Manrope',sans-serif;margin-left:8px;font-weight:600">${start}–${end} / ${totalRows}</span>
-    </div>`;
-}
 
 // ---------------------------------------------------------------------------
-// Classement
+// Classement — all rows returned; pagination/search/sort handled client-side
 // ---------------------------------------------------------------------------
 export function renderClassement(
   players: MppPlayer[],
@@ -176,8 +112,6 @@ export function renderClassement(
   usingMock: boolean,
   contestInfo?: ContestInfo | null,
   departmentFilter?: string,
-  page = 1,
-  perPage = 20,
 ): string {
   const isFiltered = Boolean(departmentFilter && departmentFilter !== "");
 
@@ -189,24 +123,29 @@ export function renderClassement(
     : "";
 
   if (players.length === 0) {
-    return `${banner}<p style="text-align:center;padding:56px 0;font-size:14px;color:#243040">Aucun joueur pour ce filtre.</p>`;
+    return `${banner}<p style="text-align:center;padding:56px 0;font-size:14px;color:#2e2850">Aucun joueur pour ce filtre.</p>`;
   }
-
-  const totalRows  = players.length;
-  const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
-  const current    = Math.min(Math.max(1, page), totalPages);
-  const start      = (current - 1) * perPage;
-  const pagePlayers = players.slice(start, start + perPage);
 
   const maxPts = players[0]?.points ?? 1;
 
-  const rows = pagePlayers.map((p, i) => {
-    const deptRank = start + i + 1;
+  const rows = players.map((p, i) => {
+    const deptRank = i + 1;
     const ptsPct   = Math.max(6, Math.round((p.points / maxPts) * 82));
     const fill     = deptRowFill(p.departmentCode);
     const c        = deptColor(p.departmentCode);
     const isTop3   = isFiltered ? deptRank <= 3 : p.rank <= 3;
-    const rowStyle = `--pts-pct:${ptsPct}%;--row-fill:${fill};border-bottom:1px solid rgba(255,255,255,0.04);cursor:default;transition:background 0.1s`;
+    const rowStyle = `--pts-pct:${ptsPct}%;--row-fill:${fill};border-bottom:1px solid rgba(255,255,255,0.04)`;
+
+    const dataAttrs = [
+      `data-id="${esc(p.id)}"`,
+      `data-name="${esc(p.pseudo)}"`,
+      `data-rank="${isFiltered ? deptRank : p.rank}"`,
+      `data-pts="${p.points}"`,
+      `data-pronos="${p.goodResults ?? 0}"`,
+      `data-exacts="${p.exactScores ?? 0}"`,
+      `data-played="${p.playedPredictions ?? 0}"`,
+      `data-dept="${p.departmentCode}"`,
+    ].join(" ");
 
     const rankCell = isFiltered
       ? `<td style="padding:10px 12px 10px 20px;width:72px;vertical-align:middle">
@@ -225,31 +164,32 @@ export function renderClassement(
       `<div class="sm:hidden" style="margin-top:3px">${deptBadge(p.departmentCode, p.departmentName)}</div>`;
 
     return `
-      <tr class="player-row" style="${rowStyle}">
+      <tr class="player-row" ${dataAttrs} style="${rowStyle}">
         ${rankCell}
         <td style="padding:8px;width:44px;vertical-align:middle">${avatarImg(p, 36)}</td>
         <td style="padding:10px 12px;vertical-align:middle;max-width:200px">
-          <div style="font-weight:600;font-size:14px;color:#dce9f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.pseudo)}">${esc(p.pseudo)}</div>
+          <div style="font-weight:600;font-size:14px;color:#ede9ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.pseudo)}">${esc(p.pseudo)}</div>
           ${mobileDeptBadge}
         </td>
         ${deptCell}
         <td style="padding:10px 16px;text-align:right;vertical-align:middle">
-          <span class="font-oswald" style="font-size:17px;font-weight:600;color:${isTop3 ? c.text : "#dce9f8"};letter-spacing:0.01em">${p.points.toLocaleString("fr-FR")}</span>
+          <span class="font-oswald" style="font-size:17px;font-weight:600;color:${isTop3 ? c.text : "#ede9ff"};letter-spacing:0.01em">${p.points.toLocaleString("fr-FR")}</span>
         </td>
-        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#4e6278;font-variant-numeric:tabular-nums">${fmt(p.goodResults)}</td>
-        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#6ee7b7;font-variant-numeric:tabular-nums">${fmt(p.exactScores)}</td>
-        <td class="hidden md:table-cell" style="padding:10px 12px;text-align:right;vertical-align:middle;font-size:12px;color:#243040;font-variant-numeric:tabular-nums">${fmt(p.playedPredictions)}</td>
+        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#5c5578;font-variant-numeric:tabular-nums">${fmt(p.goodResults)}</td>
+        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#10d48a;font-variant-numeric:tabular-nums">${fmt(p.exactScores)}</td>
+        <td class="hidden md:table-cell" style="padding:10px 12px;text-align:right;vertical-align:middle;font-size:12px;color:#2e2850;font-variant-numeric:tabular-nums">${fmt(p.playedPredictions)}</td>
         <td style="padding:10px 12px;width:44px;vertical-align:middle">${expandBtn(p.id, false)}</td>
       </tr>
       <tr id="detail-${esc(p.id)}"></tr>`;
   }).join("");
 
-  const rankTh = isFiltered
-    ? `<th style="padding-left:20px;text-align:left;width:72px">Rang</th>`
-    : `<th style="padding-left:20px;width:48px"></th>`;
-  const deptTh = isFiltered ? "" : `<th class="hidden sm:table-cell" style="padding:0 16px;text-align:left">Département</th>`;
+  const thStyle = (align = "right", extra = "") =>
+    `style="padding:0 ${align === "left" ? "12px" : "14px"};text-align:${align};${extra}"`;
 
-  const deptParam = departmentFilter ?? "";
+  const rankTh = isFiltered
+    ? `<th data-sort="rank" onclick="sortBy('rank')" style="padding-left:20px;text-align:left;width:72px">Rang<span class="si" style="color:#7c6bf8"> ↕</span></th>`
+    : `<th data-sort="rank" onclick="sortBy('rank')" style="padding-left:20px;width:48px;text-align:center"><span class="si" style="color:#7c6bf8"> ↑</span></th>`;
+  const deptTh = isFiltered ? "" : `<th class="hidden sm:table-cell" style="padding:0 16px;text-align:left">Département</th>`;
 
   return `
     ${banner}
@@ -261,17 +201,16 @@ export function renderClassement(
             <th style="width:44px"></th>
             <th style="padding:0 12px;text-align:left">Joueur</th>
             ${deptTh}
-            <th style="padding:0 16px;text-align:right">Points</th>
-            <th class="hidden sm:table-cell" style="padding:0 14px;text-align:right">Pronos</th>
-            <th class="hidden sm:table-cell" style="padding:0 14px;text-align:right">Exacts</th>
-            <th class="hidden md:table-cell" style="padding:0 12px;text-align:right">Joués</th>
+            <th data-sort="pts" onclick="sortBy('pts')" ${thStyle("right")}>Points<span class="si" style="color:#7c6bf8"> ↕</span></th>
+            <th data-sort="pronos" onclick="sortBy('pronos')" class="hidden sm:table-cell" ${thStyle()}>Pronos<span class="si" style="color:#7c6bf8"> ↕</span></th>
+            <th data-sort="exacts" onclick="sortBy('exacts')" class="hidden sm:table-cell" ${thStyle()}>Exacts<span class="si" style="color:#7c6bf8"> ↕</span></th>
+            <th data-sort="played" onclick="sortBy('played')" class="hidden md:table-cell" ${thStyle()}>Joués<span class="si" style="color:#7c6bf8"> ↕</span></th>
             <th style="width:44px"></th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>
-    ${paginationBar(current, totalPages, totalRows, perPage, deptParam)}`;
+    </div>`;
 }
 
 // ---------------------------------------------------------------------------

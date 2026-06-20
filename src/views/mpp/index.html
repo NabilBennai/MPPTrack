@@ -9,48 +9,43 @@
 </head>
 <body style="height:100dvh;overflow:hidden;display:flex;flex-direction:column">
 
-  <!-- ── Header ──────────────────────────────────────────────────────── -->
-  <header style="flex-shrink:0;z-index:20;background:rgba(9,8,14,0.92);border-bottom:1px solid rgba(124,107,248,0.15);backdrop-filter:blur(16px)">
-    <div class="px-5 sm:px-8" style="height:56px;display:flex;align-items:center;gap:16px">
-
-      <div style="display:flex;align-items:center;gap:11px">
-        <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:rgba(124,107,248,0.15);border:1px solid rgba(124,107,248,0.3)">⚽</div>
-        <span class="font-oswald" style="font-size:21px;font-weight:700;letter-spacing:0.14em;color:#ede9ff;user-select:none">MPP<span style="color:#7c6bf8">TRACK</span></span>
-      </div>
-
-      <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
-        <span id="cache-status" style="font-size:12px;color:#5c5578"></span>
-        <button
-          style="font-size:12px;padding:6px 14px;border-radius:99px;border:1px solid rgba(255,255,255,0.1);color:#5c5578;background:transparent;cursor:pointer;transition:all 0.15s;font-family:'Manrope',sans-serif;font-weight:600"
-          onmouseover="this.style.color='#ede9ff';this.style.borderColor='rgba(124,107,248,0.4)';this.style.background='rgba(124,107,248,0.1)'"
-          onmouseout="this.style.color='#5c5578';this.style.borderColor='rgba(255,255,255,0.1)';this.style.background='transparent'"
-          hx-post="/cache/clear"
-          hx-target="#cache-status"
-          hx-swap="innerHTML"
-        >↺ Actualiser</button>
-      </div>
-
+<!-- ── Header ───────────────────────────────────────────────────────────── -->
+<header style="flex-shrink:0;z-index:20;background:rgba(9,8,14,0.94);border-bottom:1px solid rgba(124,107,248,0.15);backdrop-filter:blur(16px)">
+  <div class="px-5 sm:px-8" style="height:56px;display:flex;align-items:center;gap:16px">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:rgba(124,107,248,0.15);border:1px solid rgba(124,107,248,0.3)">⚽</div>
+      <span class="font-oswald" style="font-size:21px;font-weight:700;letter-spacing:0.14em;color:#ede9ff;user-select:none">MPP<span style="color:#7c6bf8">TRACK</span></span>
     </div>
-  </header>
-
-  <!-- ── Main ────────────────────────────────────────────────────────── -->
-  <main class="px-5 sm:px-8" style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:18px;padding-top:24px;padding-bottom:0">
-
-    <!-- Stats -->
-    <div id="stats-container" style="flex-shrink:0" hx-get="/stats" hx-trigger="load" hx-swap="innerHTML">
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div style="height:74px;border-radius:10px" class="shimmer"></div>
-        <div style="height:74px;border-radius:10px;animation-delay:0.12s" class="shimmer"></div>
-        <div style="height:74px;border-radius:10px;animation-delay:0.24s" class="shimmer"></div>
-        <div style="height:74px;border-radius:10px;animation-delay:0.36s" class="shimmer"></div>
-      </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+      <span id="cache-status" style="font-size:12px;color:#5c5578"></span>
+      <button id="btn-refresh"
+        style="font-size:12px;padding:6px 14px;border-radius:99px;border:1px solid rgba(255,255,255,0.1);color:#5c5578;background:transparent;cursor:pointer;transition:all 0.15s;font-family:'Manrope',sans-serif;font-weight:600"
+        onmouseover="this.style.color='#ede9ff';this.style.borderColor='rgba(124,107,248,0.4)';this.style.background='rgba(124,107,248,0.1)'"
+        onmouseout="this.style.color='#5c5578';this.style.borderColor='rgba(255,255,255,0.1)';this.style.background='transparent'"
+        hx-post="/cache/clear" hx-target="#cache-status" hx-swap="innerHTML">↺ Actualiser</button>
     </div>
+  </div>
+</header>
 
-    <!-- Classement -->
-    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:10px;min-height:0">
+<!-- ── Main ─────────────────────────────────────────────────────────────── -->
+<main class="px-5 sm:px-8" style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding-top:22px;padding-bottom:0">
 
-      <!-- Filter tabs -->
-      <div id="dept-filters" style="flex-shrink:0;display:flex;flex-wrap:wrap;gap:6px">
+  <!-- Stats -->
+  <div id="stats-container" style="flex-shrink:0" hx-get="/stats" hx-trigger="load" hx-swap="innerHTML">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div style="height:74px;border-radius:10px" class="shimmer"></div>
+      <div style="height:74px;border-radius:10px;animation-delay:0.12s" class="shimmer"></div>
+      <div style="height:74px;border-radius:10px;animation-delay:0.24s" class="shimmer"></div>
+      <div style="height:74px;border-radius:10px;animation-delay:0.36s" class="shimmer"></div>
+    </div>
+  </div>
+
+  <!-- Classement section -->
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:10px;min-height:0">
+
+    <!-- Filter tabs + actions row -->
+    <div style="flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px">
+      <div id="dept-filters" style="display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0">
         <button class="dept-tab fp-all" data-dept="" data-active
           hx-get="/classement" hx-target="#classement-container" hx-swap="innerHTML">Tous</button>
         <button class="dept-tab fp-MT" data-dept="MT"
@@ -62,32 +57,436 @@
         <button class="dept-tab fp-WD" data-dept="WD"
           hx-get="/classement?department=WD" hx-target="#classement-container" hx-swap="innerHTML">Winddle</button>
       </div>
+      <!-- Icon actions -->
+      <div style="display:flex;gap:5px;flex-shrink:0">
+        <button onclick="exportCSV()" title="Exporter CSV" style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#5c5578;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all 0.15s" onmouseover="this.style.color='#ede9ff';this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.color='#5c5578';this.style.borderColor='rgba(255,255,255,0.08)'">↓</button>
+        <button onclick="copyLink()" title="Copier le lien" style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#5c5578;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all 0.15s" onmouseover="this.style.color='#ede9ff';this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.color='#5c5578';this.style.borderColor='rgba(255,255,255,0.08)'">⎘</button>
+        <button onclick="showKbOverlay()" title="Raccourcis clavier (? )" style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#5c5578;cursor:pointer;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:'Manrope',sans-serif" onmouseover="this.style.color='#ede9ff';this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.color='#5c5578';this.style.borderColor='rgba(255,255,255,0.08)'">?</button>
+      </div>
+    </div>
 
-      <!-- Table -->
-      <div style="flex:1;min-height:0;border-radius:14px;border:1px solid rgba(255,255,255,0.07);background:#12101c;overflow-y:auto;overflow-x:hidden">
-        <div id="classement-container" hx-get="/classement" hx-trigger="load" hx-swap="innerHTML">
-          <div style="padding:72px 0;display:flex;flex-direction:column;align-items:center;gap:14px;color:#2e2850">
-            <div style="width:22px;height:22px;border-radius:50%;border:2px solid #2e2850;border-top-color:#7c6bf8" class="animate-spin"></div>
-            <span style="font-size:14px">Chargement…</span>
-          </div>
+    <!-- Search + controls row -->
+    <div style="flex-shrink:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <!-- Search -->
+      <div style="flex:1;min-width:150px;position:relative">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#5c5578;font-size:14px;pointer-events:none;line-height:1">⌕</span>
+        <input id="search-input" type="search" placeholder="Rechercher un joueur…"
+          style="width:100%;box-sizing:border-box;background:#1a1829;border:1px solid rgba(255,255,255,0.08);border-radius:99px;padding:7px 14px 7px 34px;font-size:13px;color:#ede9ff;font-family:'Manrope',sans-serif;outline:none;transition:border-color 0.15s"
+          onfocus="this.style.borderColor='rgba(124,107,248,0.45)'"
+          onblur="this.style.borderColor='rgba(255,255,255,0.08)'">
+      </div>
+      <!-- Me button -->
+      <button onclick="toggleMeInput()" id="btn-me-toggle"
+        style="padding:7px 13px;border-radius:99px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#5c5578;cursor:pointer;font-size:12px;font-weight:600;font-family:'Manrope',sans-serif;white-space:nowrap;transition:all 0.15s;display:flex;align-items:center;gap:5px"
+        onmouseover="this.style.color='#a99bff';this.style.borderColor='rgba(124,107,248,0.35)';this.style.background='rgba(124,107,248,0.08)'"
+        onmouseout="this.style.color='#5c5578';this.style.borderColor='rgba(255,255,255,0.08)';this.style.background='rgba(255,255,255,0.04)'">
+        <span style="font-size:13px">👤</span> Me trouver
+      </button>
+      <!-- Per page -->
+      <select id="per-page-select" onchange="setPerPage(this.value)"
+        style="background:#1a1829;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 10px;font-size:12px;color:#5c5578;font-family:'Manrope',sans-serif;cursor:pointer;outline:none">
+        <option value="10">10 / page</option>
+        <option value="20" selected>20 / page</option>
+        <option value="50">50 / page</option>
+        <option value="0">Tout afficher</option>
+      </select>
+      <!-- Count -->
+      <span id="row-count" style="font-size:11px;color:#2e2850;white-space:nowrap;font-family:'Manrope',sans-serif;font-weight:600"></span>
+    </div>
+
+    <!-- Me input (hidden) -->
+    <div id="me-wrap" style="display:none;flex-shrink:0;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:#1a1829;border:1px solid rgba(124,107,248,0.25)">
+      <span style="font-size:12px;color:#5c5578;font-family:'Manrope',sans-serif;font-weight:600;white-space:nowrap">Mon pseudo :</span>
+      <input id="me-input" type="text" placeholder="Entrez votre pseudo exact…"
+        style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:6px 12px;font-size:13px;color:#ede9ff;font-family:'Manrope',sans-serif;outline:none;transition:border-color 0.15s"
+        onfocus="this.style.borderColor='rgba(124,107,248,0.45)'"
+        onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+      <button onclick="findMe()"
+        style="padding:6px 16px;border-radius:8px;background:#7c6bf8;border:none;color:#fff;font-size:13px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer">
+        Trouver
+      </button>
+      <button onclick="clearMe()" title="Effacer ma position"
+        style="width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#5c5578;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">
+        ✕
+      </button>
+    </div>
+
+    <!-- Table scroll wrapper -->
+    <div id="table-scroll-wrap" style="flex:1;min-height:0;border-radius:14px;border:1px solid rgba(255,255,255,0.07);background:#12101c;overflow-y:auto;overflow-x:hidden">
+      <div id="classement-container" hx-get="/classement" hx-trigger="load" hx-swap="innerHTML">
+        <div style="padding:72px 0;display:flex;flex-direction:column;align-items:center;gap:14px;color:#2e2850">
+          <div style="width:22px;height:22px;border-radius:50%;border:2px solid #2e2850;border-top-color:#7c6bf8" class="animate-spin"></div>
+          <span style="font-size:14px">Chargement…</span>
         </div>
       </div>
-
+      <!-- Pagination (injected by JS, sticky at bottom) -->
+      <div id="pagination-bar" style="display:none;position:sticky;bottom:0;z-index:10;background:#12101c;align-items:center;justify-content:center;padding:10px 20px;border-top:1px solid rgba(255,255,255,0.06);gap:5px;flex-wrap:wrap"></div>
     </div>
-  </main>
 
-  <script>
-    function setActivePill(dept) {
-      document.querySelectorAll('.dept-tab').forEach(p => {
-        if (String(p.dataset.dept) === String(dept)) p.setAttribute('data-active', '');
-        else p.removeAttribute('data-active');
-      });
-    }
-    document.getElementById('dept-filters').addEventListener('click', e => {
-      const btn = e.target.closest('.dept-tab');
-      if (btn) setActivePill(btn.dataset.dept ?? '');
+  </div>
+</main>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────────── -->
+<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:#1a1829;border:1px solid rgba(124,107,248,0.3);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;color:#ede9ff;font-family:'Manrope',sans-serif;opacity:0;pointer-events:none;z-index:200;transition:opacity 0.22s,transform 0.22s;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,0.5)"></div>
+
+<!-- ── Keyboard shortcut overlay ──────────────────────────────────────────── -->
+<div id="kb-overlay" onclick="this.style.display='none'"
+  style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);align-items:center;justify-content:center">
+  <div onclick="event.stopPropagation()" style="background:#1a1829;border-radius:16px;border:1px solid rgba(255,255,255,0.1);padding:28px 32px;max-width:380px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,0.6)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <span class="font-oswald" style="font-size:18px;font-weight:600;color:#ede9ff;letter-spacing:0.06em">RACCOURCIS</span>
+      <button onclick="document.getElementById('kb-overlay').style.display='none'" style="background:none;border:none;color:#5c5578;font-size:18px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px"><kbd style="background:#0d0c16;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:3px 9px;font-size:12px;font-family:monospace;color:#a99bff;min-width:48px;text-align:center">/ ou f</kbd><span style="font-size:13px;color:#5c5578">Focus recherche</span></div>
+      <div style="display:flex;align-items:center;gap:12px"><kbd style="background:#0d0c16;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:3px 9px;font-size:12px;font-family:monospace;color:#a99bff;min-width:48px;text-align:center">j / ↓</kbd><span style="font-size:13px;color:#5c5578">Joueur suivant</span></div>
+      <div style="display:flex;align-items:center;gap:12px"><kbd style="background:#0d0c16;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:3px 9px;font-size:12px;font-family:monospace;color:#a99bff;min-width:48px;text-align:center">k / ↑</kbd><span style="font-size:13px;color:#5c5578">Joueur précédent</span></div>
+      <div style="display:flex;align-items:center;gap:12px"><kbd style="background:#0d0c16;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:3px 9px;font-size:12px;font-family:monospace;color:#a99bff;min-width:48px;text-align:center">↵</kbd><span style="font-size:13px;color:#5c5578">Ouvrir / fermer le détail</span></div>
+      <div style="display:flex;align-items:center;gap:12px"><kbd style="background:#0d0c16;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:3px 9px;font-size:12px;font-family:monospace;color:#a99bff;min-width:48px;text-align:center">Esc</kbd><span style="font-size:13px;color:#5c5578">Fermer / annuler</span></div>
+      <div style="display:flex;align-items:center;gap:12px"><kbd style="background:#0d0c16;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:3px 9px;font-size:12px;font-family:monospace;color:#a99bff;min-width:48px;text-align:center">?</kbd><span style="font-size:13px;color:#5c5578">Ce menu</span></div>
+    </div>
+    <p style="margin-top:18px;font-size:11px;color:#2e2850;text-align:center">Cliquer en dehors pour fermer</p>
+  </div>
+</div>
+
+<script>
+// ── Dept filter pills ─────────────────────────────────────────────────────
+function setActivePill(dept) {
+  document.querySelectorAll('.dept-tab').forEach(p => {
+    String(p.dataset.dept) === String(dept)
+      ? p.setAttribute('data-active', '')
+      : p.removeAttribute('data-active');
+  });
+}
+document.getElementById('dept-filters').addEventListener('click', e => {
+  const btn = e.target.closest('.dept-tab');
+  if (btn) setActivePill(btn.dataset.dept ?? '');
+});
+
+// ── Client-side table engine ──────────────────────────────────────────────
+(function () {
+  const $ = id => document.getElementById(id);
+
+  const state = {
+    search: '',
+    sort: 'rank',
+    dir: 'asc',
+    page: 1,
+    perPage: 20,
+    myName: localStorage.getItem('mpp_me') || '',
+    focused: null,
+  };
+
+  // ── Row accessors ─────────────────────────────────────
+  function allRows() {
+    return [...document.querySelectorAll('#classement-container .player-row')];
+  }
+  function visibleRows() {
+    return allRows().filter(r => r.style.display !== 'none');
+  }
+  function filteredRows() {
+    const q = state.search.toLowerCase().trim();
+    return q ? allRows().filter(r => r.dataset.name.toLowerCase().includes(q)) : allRows();
+  }
+  function sortedRows(rows) {
+    const f = state.sort, dir = state.dir === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => (parseFloat(a.dataset[f] ?? 0) - parseFloat(b.dataset[f] ?? 0)) * dir);
+  }
+
+  // ── DOM reorder (pairs: player-row + detail-row) ──────
+  function reorderDOM(sorted) {
+    const tbody = document.querySelector('#classement-container tbody');
+    if (!tbody) return;
+    sorted.forEach(row => {
+      tbody.appendChild(row);
+      const d = document.getElementById('detail-' + row.dataset.id);
+      if (d) tbody.appendChild(d);
     });
-  </script>
+  }
+
+  // ── Main render ───────────────────────────────────────
+  function render() {
+    const filtered = filteredRows();
+    const sorted   = sortedRows(filtered);
+    const total    = sorted.length;
+
+    reorderDOM(sorted);
+
+    const pp          = state.perPage === 0 ? total : state.perPage;
+    const totalPages  = Math.max(1, pp ? Math.ceil(total / pp) : 1);
+    state.page        = Math.min(state.page, totalPages);
+    const start       = (state.page - 1) * (pp || 1);
+    const end         = pp ? start + pp : total;
+    const visible     = new Set(sorted.slice(start, Math.min(end, total)));
+
+    allRows().forEach(row => {
+      const show = visible.has(row);
+      row.style.display = show ? '' : 'none';
+      const det = document.getElementById('detail-' + row.dataset.id);
+      if (det) {
+        if (!show && det.children.length) det.innerHTML = '';
+        det.style.display = show ? '' : 'none';
+      }
+    });
+
+    highlightMe();
+    updateSortHeaders();
+    updateCount(total, Math.min(start + 1, total), Math.min(end, total));
+    renderPagination(state.page, totalPages, total, start, Math.min(end, total));
+    updateEmptyState(total);
+  }
+
+  // ── Empty state ───────────────────────────────────────
+  function updateEmptyState(total) {
+    let el = $('table-empty');
+    if (total === 0) {
+      if (!el) {
+        const tbody = document.querySelector('#classement-container tbody');
+        if (!tbody) return;
+        el = document.createElement('tr');
+        el.id = 'table-empty';
+        el.innerHTML = `<td colspan="99" style="text-align:center;padding:44px 0;color:#2e2850;font-size:14px;font-family:'Manrope',sans-serif">
+          Aucun résultat pour <em style="color:#5c5578">${escH(state.search)}</em>
+        </td>`;
+        tbody.appendChild(el);
+      }
+    } else if (el) el.remove();
+  }
+
+  function escH(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Sort headers ──────────────────────────────────────
+  function updateSortHeaders() {
+    document.querySelectorAll('#classement-container [data-sort]').forEach(th => {
+      const ind    = th.querySelector('.si');
+      if (!ind) return;
+      const active = th.dataset.sort === state.sort;
+      ind.textContent = active ? (state.dir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
+      ind.style.opacity = active ? '1' : '0.22';
+      th.style.color = active ? '#ede9ff' : '';
+    });
+  }
+
+  // ── Row count ─────────────────────────────────────────
+  function updateCount(total, start, end) {
+    const el = $('row-count');
+    if (!el) return;
+    el.textContent = total === 0 ? '' :
+      total <= state.perPage || state.perPage === 0
+        ? `${total} joueur${total > 1 ? 's' : ''}`
+        : `${start}–${end} / ${total}`;
+  }
+
+  // ── Pagination ────────────────────────────────────────
+  function renderPagination(current, total, totalRows, start, end) {
+    const bar = $('pagination-bar');
+    if (!bar) return;
+    if (total <= 1) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+
+    const bs = (active, disabled) => active
+      ? 'background:rgba(124,107,248,0.2);border:1px solid rgba(124,107,248,0.5);color:#a99bff;box-shadow:0 0 10px rgba(124,107,248,0.2);cursor:default'
+      : disabled
+        ? 'background:transparent;border:1px solid rgba(255,255,255,0.04);color:#2e2850;cursor:not-allowed'
+        : 'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);color:#5c5578;cursor:pointer';
+
+    const pb = (n, label, active, disabled) =>
+      `<button ${!active && !disabled ? `onclick="window._mppSetPage(${n})"` : ''} style="${bs(active,disabled)};${label.length>1?'padding:0 10px':'width:30px'};height:30px;border-radius:8px;font-size:12px;font-weight:700;font-family:'Manrope',sans-serif;display:inline-flex;align-items:center;justify-content:center;transition:all 0.12s">${label}</button>`;
+
+    const MAX = 5;
+    let pages = [];
+    if (total <= MAX + 2) {
+      pages = Array.from({ length: total }, (_, i) => i + 1);
+    } else {
+      const half = Math.floor(MAX / 2);
+      let s = Math.max(2, current - half);
+      let e = Math.min(total - 1, s + MAX - 1);
+      if (e - s < MAX - 1) s = Math.max(2, e - MAX + 1);
+      pages = [1];
+      if (s > 2) pages.push('…');
+      for (let i = s; i <= e; i++) pages.push(i);
+      if (e < total - 1) pages.push('…');
+      pages.push(total);
+    }
+
+    bar.innerHTML =
+      pb(current - 1, '←', false, current === 1) +
+      pages.map(p => p === '…'
+        ? `<span style="width:20px;text-align:center;color:#2e2850;font-size:12px">…</span>`
+        : pb(p, p, p === current, false)
+      ).join('') +
+      pb(current + 1, '→', false, current === total) +
+      `<span style="font-size:11px;color:#2e2850;font-family:'Manrope',sans-serif;margin-left:8px;font-weight:600">${start}–${end} / ${totalRows}</span>`;
+  }
+
+  window._mppSetPage = function (n) {
+    state.page = n;
+    render();
+    const wrap = $('table-scroll-wrap');
+    if (wrap) wrap.scrollTop = 0;
+  };
+
+  // ── Me highlight ──────────────────────────────────────
+  function highlightMe() {
+    const name = state.myName.toLowerCase().trim();
+    allRows().forEach(r => { r.dataset.me = (name && r.dataset.name.toLowerCase() === name) ? '1' : ''; });
+  }
+
+  // ── Keyboard focus ────────────────────────────────────
+  function focusRow(row) {
+    if (state.focused) state.focused.dataset.focused = '';
+    state.focused = row;
+    if (row) { row.dataset.focused = '1'; row.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  }
+
+  document.addEventListener('keydown', e => {
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+      if (e.key === 'Escape') e.target.blur();
+      return;
+    }
+    const vis = visibleRows();
+    const idx = state.focused ? vis.indexOf(state.focused) : -1;
+
+    if (e.key === '/' || e.key === 'f') { e.preventDefault(); $('search-input')?.focus(); }
+    else if (e.key === 'j' || e.key === 'ArrowDown') { e.preventDefault(); focusRow(vis[Math.min(idx + 1, vis.length - 1)]); }
+    else if (e.key === 'k' || e.key === 'ArrowUp')   { e.preventDefault(); focusRow(vis[Math.max(idx - 1, 0)]); }
+    else if (e.key === 'Enter' && state.focused)      { state.focused.querySelector('[id^="btn-"]')?.click(); }
+    else if (e.key === 'Escape') {
+      const overlay = $('kb-overlay');
+      if (overlay && overlay.style.display !== 'none') { overlay.style.display = 'none'; return; }
+      const me = $('me-wrap');
+      if (me && me.style.display !== 'none') { me.style.display = 'none'; return; }
+      if (state.focused) focusRow(null);
+    }
+    else if (e.key === '?') showKbOverlay();
+  });
+
+  // ── Global functions ──────────────────────────────────
+  window.sortBy = function (field) {
+    state.sort = field === state.sort ? state.sort : field;
+    state.dir  = field === state.sort && state.dir === 'desc' ? 'asc' : (field !== state.sort ? (field === 'rank' ? 'asc' : 'desc') : (state.dir === 'asc' ? 'desc' : 'asc'));
+    // simpler:
+    if (field === state.sort) { state.dir = state.dir === 'asc' ? 'desc' : 'asc'; }
+    else { state.sort = field; state.dir = field === 'rank' ? 'asc' : 'desc'; }
+    state.page = 1;
+    render();
+  };
+
+  window.setPerPage = function (val) {
+    state.perPage = parseInt(val, 10) || 0;
+    state.page = 1;
+    render();
+  };
+
+  window.toggleMeInput = function () {
+    const wrap = $('me-wrap');
+    if (!wrap) return;
+    const shown = wrap.style.display !== 'none';
+    wrap.style.display = shown ? 'none' : 'flex';
+    if (!shown) { const inp = $('me-input'); if (inp) { inp.value = state.myName; inp.focus(); } }
+  };
+
+  window.findMe = function () {
+    const inp = $('me-input');
+    if (!inp) return;
+    const name = inp.value.trim();
+    if (!name) { showToast('❌ Entre ton pseudo d\'abord'); return; }
+    state.myName = name;
+    localStorage.setItem('mpp_me', name);
+    state.search = '';
+    const si = $('search-input');
+    if (si) si.value = '';
+    state.page = 1;
+    render();
+    setTimeout(() => {
+      const found = document.querySelector('.player-row[data-me="1"]');
+      if (found) found.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      else showToast('❓ Pseudo introuvable dans le classement');
+    }, 60);
+    if (document.querySelector('.player-row[data-me="1"]') || true) {
+      $('me-wrap').style.display = 'none';
+      showToast('📍 ' + name + ' trouvé !');
+    }
+  };
+
+  window.clearMe = function () {
+    state.myName = '';
+    localStorage.removeItem('mpp_me');
+    allRows().forEach(r => r.dataset.me = '');
+    $('me-wrap').style.display = 'none';
+    const inp = $('me-input');
+    if (inp) inp.value = '';
+    showToast('👤 Position effacée');
+  };
+
+  window.exportCSV = function () {
+    const filtered = filteredRows();
+    const sorted   = sortedRows(filtered);
+    const pp       = state.perPage === 0 ? sorted.length : state.perPage;
+    const rows     = state.perPage === 0 ? sorted : sorted.slice((state.page - 1) * pp, state.page * pp);
+    const headers  = ['Rang','Joueur','Département','Points','Pronos','Exacts','Joués'];
+    const lines    = [headers.join(','), ...rows.map(r => [
+      r.dataset.rank,
+      '"' + (r.dataset.name || '').replace(/"/g, '""') + '"',
+      r.dataset.dept,
+      r.dataset.pts,
+      r.dataset.pronos,
+      r.dataset.exacts,
+      r.dataset.played,
+    ].join(','))];
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'mpp-classement.csv' });
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('📥 Export téléchargé !');
+  };
+
+  window.copyLink = function () {
+    const url = new URL(location.href);
+    url.search = '';
+    navigator.clipboard?.writeText(url.href).then(() => showToast('🔗 Lien copié !'))
+      .catch(() => { /* fallback */ showToast('🔗 ' + url.href); });
+  };
+
+  window.showToast = function (msg) {
+    const t = $('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.style.opacity = '1';
+    t.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(t._t);
+    t._t = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(10px)'; }, 2400);
+  };
+
+  window.showKbOverlay = function () {
+    const o = $('kb-overlay');
+    if (o) o.style.display = 'flex';
+  };
+
+  // ── Init ──────────────────────────────────────────────
+  function init() {
+    const si = $('search-input');
+    if (si) { si.value = state.search; si.addEventListener('input', e => { state.search = e.target.value; state.page = 1; render(); }); }
+
+    const mi = $('me-input');
+    if (mi) mi.addEventListener('keydown', e => { if (e.key === 'Enter') findMe(); });
+
+    render();
+  }
+
+  document.addEventListener('htmx:afterSwap', e => {
+    if (e.detail.target.id === 'classement-container') {
+      state.page = 1;
+      state.focused = null;
+      init();
+    }
+  });
+
+})();
+</script>
 
 </body>
 </html>

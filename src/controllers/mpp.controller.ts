@@ -48,15 +48,12 @@ export async function mppClassementHandler(req: Request, res: Response): Promise
     const department =
       typeof req.query["department"] === "string" ? req.query["department"] : undefined;
 
-    const page    = parseInt(typeof req.query["page"]    === "string" ? req.query["page"]    : "1",  10) || 1;
-    const perPage = parseInt(typeof req.query["perPage"] === "string" ? req.query["perPage"] : "20", 10) || 20;
-
     const allPlayers  = await getMppClassement();
     const filtered    = filterByDepartment(allPlayers, department);
     const isMock      = useMock();
     const contestInfo = isMock ? null : await getContestInfo().catch(() => null);
 
-    res.send(renderClassement(filtered, formatDate(), isMock, contestInfo, department, page, perPage));
+    res.send(renderClassement(filtered, formatDate(), isMock, contestInfo, department));
   } catch (_err) {
     res.status(500).send(renderError("Erreur lors du chargement du classement."));
   }
