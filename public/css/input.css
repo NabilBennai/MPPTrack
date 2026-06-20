@@ -10,10 +10,10 @@
   --border:    rgba(255,255,255,0.07);
   --border-hi: rgba(255,255,255,0.13);
   --t1:        #ede9ff;
-  --t2:        #5c5578;
-  --t3:        #2e2850;
+  --t2:        #aaa2c4;
+  --t3:        #81789d;
 
-  --accent:     #7c6bf8;
+  --accent:     #9b8cff;
   --accent-dim: rgba(124,107,248,0.12);
   --accent-hi:  rgba(124,107,248,0.25);
 
@@ -216,3 +216,114 @@ main, header { position: relative; z-index: 1; }
 .history-empty{padding:80px 24px;text-align:center;border:1px dashed rgba(124,107,248,.25);border-radius:18px;background:rgba(124,107,248,.035)}.history-empty-icon{width:54px;height:54px;margin:0 auto 16px;display:grid;place-items:center;border-radius:50%;color:#a99bff;background:rgba(124,107,248,.12);font-size:28px}.history-empty h2{font-size:26px}.history-empty p{max-width:520px;margin:8px auto 18px;color:#5c5578;font-size:13px}.history-empty code{color:#a99bff;font-size:11px}
 @media(max-width:900px){.history-metrics{grid-template-columns:repeat(2,1fr)}.history-dashboard{grid-template-columns:1fr}.history-panel-wide:last-child{grid-column:auto}}
 @media(max-width:640px){.history-header{padding:10px 16px;flex-wrap:wrap;gap:8px 14px}.history-nav{order:3;width:100%}.history-range span{display:none}.history-main{padding:28px 16px 48px}.history-hero{align-items:flex-start;flex-direction:column}.escm-banner{align-items:flex-start;flex-wrap:wrap}.escm-banner p{width:100%;margin:2px 0 0 51px}.history-metrics{grid-template-columns:1fr 1fr}.history-metric{min-height:104px;padding:15px}.history-metric strong{font-size:22px}.history-panel{padding:16px}.history-panel-heading{flex-direction:column}.history-legend{max-width:100%;justify-content:flex-start}.history-chart{min-height:280px}}
+
+/* ─── Accessibility contrast layer ─────────────────────────────────────── */
+/*
+ * Legacy templates contain inline colors. These selectors keep their visual
+ * hierarchy while raising low-contrast text to readable levels globally.
+ */
+body { color-scheme: dark; }
+
+body [style*="color:#5c5578"],
+body [style*="color: #5c5578"] { color:#aaa2c4 !important; }
+
+body [style*="color:#2e2850"],
+body [style*="color: #2e2850"] { color:#81789d !important; }
+
+body [style*="color:#39324f"],
+body [style*="color: #39324f"] { color:#9289ad !important; }
+
+body [style*="color:#243040"],
+body [style*="color: #243040"] { color:#9b93b4 !important; }
+
+body [style*="color:#4e6278"],
+body [style*="color: #4e6278"] { color:#a8b4c7 !important; }
+
+body [style*="color:#a0a0c0"],
+body [style*="color: #a0a0c0"] { color:#cbc5dc !important; }
+
+body [style*="color:#8d67a9"],
+body [style*="color: #8d67a9"] { color:#c89ee5 !important; }
+
+::placeholder {
+  color:#9189a9 !important;
+  opacity:1;
+}
+
+input,
+select,
+textarea {
+  border-color:rgba(255,255,255,.16) !important;
+}
+
+input,
+select,
+textarea {
+  color:#f2efff !important;
+  background-color:#1d1a2c !important;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline:3px solid rgba(168,151,255,.92) !important;
+  outline-offset:3px;
+}
+
+.table-head th,
+.history-table th {
+  color:#9f97b8;
+}
+
+.history-nav a,
+.history-range,
+.history-hero p,
+.history-live,
+.history-metric span,
+.history-metric small,
+.history-panel-heading p,
+.history-legend button,
+.history-table td,
+.history-empty p {
+  color:#aaa2c4;
+}
+
+.history-rank-row small,
+.history-table td small,
+.movement.neutral,
+.history-muted,
+.chart-label,
+.chart-time-label {
+  color:#9189aa;
+  fill:#9189aa;
+}
+
+.rank-pair small { color:#a79dbd; }
+.history-legend button b { color:#c2bad4; }
+
+.stat-card,
+#table-scroll-wrap,
+.history-panel,
+.history-metric,
+.history-chart-shell {
+  border-color:rgba(255,255,255,.13);
+}
+
+.player-row,
+.history-rank-row,
+.history-table td {
+  border-color:rgba(255,255,255,.09);
+}
+
+.dept-tab {
+  color:#b4acc9;
+  border-color:rgba(255,255,255,.11);
+}
+
+.dept-tab:hover { color:#fff; }
+
+.movement.up { color:#52e6ad; }
+.movement.down { color:#ff87ad; }
