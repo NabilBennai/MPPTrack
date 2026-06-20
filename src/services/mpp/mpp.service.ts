@@ -127,22 +127,27 @@ async function fetchRawStandings(contestId: string): Promise<MppRawStandingEntry
 // Normalisation brut → modèle interne
 // ---------------------------------------------------------------------------
 function normalizeEntry(entry: MppRawStandingEntry, index: number): MppPlayer {
+  // L'API retourne { user: {...}, ranking: {...} } — on aplatit d'abord
+  const user    = (typeof entry["user"]    === "object" && entry["user"]    !== null ? entry["user"]    : {}) as Record<string, unknown>;
+  const ranking = (typeof entry["ranking"] === "object" && entry["ranking"] !== null ? entry["ranking"] : {}) as Record<string, unknown>;
+
   const pseudo = String(
-    entry.username ?? entry.pseudo ?? entry.firstName ?? `Joueur${index + 1}`
+    user["username"] ?? user["pseudo"] ?? user["firstName"] ??
+    entry.username   ?? entry.pseudo   ?? entry.firstName   ?? `Joueur${index + 1}`
   );
   const { code, name } = getDepartmentFromPseudo(pseudo);
 
   return {
-    id:     String(entry.userId ?? entry.id ?? index + 1),
+    id:     String(user["id"] ?? entry.userId ?? entry.id ?? index + 1),
     pseudo,
-    rank:   Number(entry.rank ?? entry.ranking ?? index + 1),
-    points: Number(entry.points ?? entry.totalPoints ?? 0),
+    rank:   Number(ranking["rank"] ?? entry.rank ?? entry.ranking ?? index + 1),
+    points: Number(ranking["points"] ?? entry.points ?? entry.totalPoints ?? 0),
     departmentCode: code,
     departmentName: name,
-    exactScores:       toOptionalNumber(entry.exactScores ?? entry.exactResults),
-    goodResults:       toOptionalNumber(entry.goodResults ?? entry.correctResults),
-    playedPredictions: toOptionalNumber(entry.playedPredictions ?? entry.totalForecasts),
-    avatarUrl: typeof entry.avatarUrl === "string" ? entry.avatarUrl : undefined,
+    exactScores:       toOptionalNumber(ranking["exactForecasts"] ?? entry.exactScores ?? entry.exactResults),
+    goodResults:       toOptionalNumber(ranking["goodForecasts"]  ?? entry.goodResults ?? entry.correctResults),
+    playedPredictions: toOptionalNumber(ranking["calculatedForecasts"] ?? entry.playedPredictions ?? entry.totalForecasts),
+    avatarUrl: typeof user["avatarUrl"] === "string" ? user["avatarUrl"] : (typeof entry.avatarUrl === "string" ? entry.avatarUrl : undefined),
   };
 }
 

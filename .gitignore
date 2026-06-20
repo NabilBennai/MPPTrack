@@ -16,6 +16,9 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# Tokens MPP (générés automatiquement par le refresh token)
+.mpp_tokens.json
+
 # IDE
 .vscode/
 .idea/
