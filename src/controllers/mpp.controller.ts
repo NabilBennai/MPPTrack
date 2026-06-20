@@ -54,10 +54,7 @@ export async function mppHistoryDataHandler(req: Request, res: Response): Promis
     const players = typeof req.query["players"] === "string"
       ? req.query["players"].split(",").map((value) => value.trim()).filter(Boolean)
       : [];
-    const department = typeof req.query["department"] === "string"
-      ? req.query["department"]
-      : undefined;
-    res.json(await getHistoryDashboard(days, players, department));
+    res.json(await getHistoryDashboard(days, players));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Historique indisponible.";
     res.status(500).json({ error: message });

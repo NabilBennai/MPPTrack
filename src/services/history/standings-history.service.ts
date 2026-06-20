@@ -16,7 +16,8 @@ function getClient(): Client {
 export async function ensureHistorySchema(): Promise<void> {
   if (schemaReady) return schemaReady;
   schemaReady = (async () => {
-    await getClient().batch([
+    const db = getClient();
+    await db.batch([
       `CREATE TABLE IF NOT EXISTS standings_snapshots (
         id TEXT PRIMARY KEY,
         contest_id TEXT NOT NULL,
@@ -27,26 +28,48 @@ export async function ensureHistorySchema(): Promise<void> {
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(contest_id, captured_hour)
       )`,
-      `CREATE TABLE IF NOT EXISTS player_standings_history (
+      `CREATE TABLE IF NOT EXISTS es_position_history (
         snapshot_id TEXT NOT NULL,
         player_id TEXT NOT NULL,
         pseudo TEXT NOT NULL,
-        department_code TEXT NOT NULL,
-        department_name TEXT NOT NULL,
-        rank INTEGER NOT NULL,
-        points INTEGER NOT NULL,
-        exact_scores INTEGER,
-        good_results INTEGER,
-        played_predictions INTEGER,
-        avatar_url TEXT,
+        global_rank INTEGER NOT NULL,
+        escm_rank INTEGER NOT NULL,
         PRIMARY KEY(snapshot_id, player_id),
         FOREIGN KEY(snapshot_id) REFERENCES standings_snapshots(id) ON DELETE CASCADE
       )`,
       `CREATE INDEX IF NOT EXISTS idx_snapshots_contest_captured
         ON standings_snapshots(contest_id, captured_at DESC)`,
-      `CREATE INDEX IF NOT EXISTS idx_history_player_snapshot
-        ON player_standings_history(player_id, snapshot_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_es_positions_player_snapshot
+        ON es_position_history(player_id, snapshot_id)`,
     ], "write");
+
+    const legacyTable = await db.execute(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'player_standings_history'"
+    );
+    if (legacyTable.rows.length > 0) {
+      await db.batch([
+        `INSERT OR IGNORE INTO es_position_history
+          (snapshot_id, player_id, pseudo, global_rank, escm_rank)
+          SELECT snapshot_id, player_id, pseudo, rank,
+            ROW_NUMBER() OVER (
+              PARTITION BY snapshot_id
+              ORDER BY rank ASC, player_id ASC
+            )
+          FROM player_standings_history
+          WHERE department_code = 'ES'`,
+        `UPDATE standings_snapshots
+          SET player_count = (
+            SELECT COUNT(*) FROM es_position_history p
+            WHERE p.snapshot_id = standings_snapshots.id
+          )
+          WHERE EXISTS (
+            SELECT 1 FROM es_position_history p
+            WHERE p.snapshot_id = standings_snapshots.id
+          )`,
+        "DROP TABLE player_standings_history",
+      ], "write");
+      console.log("[history] ancien historique migré vers les positions e-SCM");
+    }
   })().catch((error) => {
     schemaReady = undefined;
     throw error;
@@ -80,18 +103,21 @@ export async function captureStandingsSnapshot(now = new Date()): Promise<Captur
   }
 
   await ensureHistorySchema();
+  const db = getClient();
   const contest = await getContestInfo().catch(() => null);
   const contestId = contest?.contestId ?? process.env["MPP_CHALLENGE_ID"] ?? "default";
   const contestTitle = contest?.title ?? process.env["MPP_LEAGUE_TITLE"] ?? "MPP";
   const intervalMinutes = getSnapshotIntervalMinutes();
   const capturedAt = now.toISOString();
-  // captured_hour est conservé pour compatibilité avec le schéma existant.
-  // Sa valeur représente désormais le début du créneau configurable.
-  const capturedHour = snapshotBucket(now, intervalMinutes);
-  const snapshotId = `${contestId}:${capturedHour}`;
-  const existing = await getClient().execute({
-    sql: `SELECT captured_at, player_count, contest_title
-      FROM standings_snapshots WHERE id = ? LIMIT 1`,
+  const capturedSlot = snapshotBucket(now, intervalMinutes);
+  const snapshotId = `${contestId}:${capturedSlot}`;
+
+  const existing = await db.execute({
+    sql: `SELECT s.captured_at, s.player_count, s.contest_title
+      FROM standings_snapshots s
+      WHERE s.id = ?
+        AND EXISTS (SELECT 1 FROM es_position_history p WHERE p.snapshot_id = s.id)
+      LIMIT 1`,
     args: [snapshotId],
   });
   const existingRow = existing.rows[0];
@@ -106,7 +132,9 @@ export async function captureStandingsSnapshot(now = new Date()): Promise<Captur
     };
   }
 
-  const players = await getMppClassement();
+  const esPlayers = (await getMppClassement())
+    .filter((player) => player.departmentCode === "ES")
+    .sort((a, b) => a.rank - b.rank);
 
   const statements: InStatement[] = [
     {
@@ -117,52 +145,42 @@ export async function captureStandingsSnapshot(now = new Date()): Promise<Captur
           contest_title = excluded.contest_title,
           captured_at = excluded.captured_at,
           player_count = excluded.player_count`,
-      args: [snapshotId, contestId, contestTitle, capturedAt, capturedHour, players.length],
+      args: [snapshotId, contestId, contestTitle, capturedAt, capturedSlot, esPlayers.length],
     },
-    { sql: "DELETE FROM player_standings_history WHERE snapshot_id = ?", args: [snapshotId] },
-    ...players.map((player): InStatement => ({
-      sql: `INSERT INTO player_standings_history (
-        snapshot_id, player_id, pseudo, department_code, department_name,
-        rank, points, exact_scores, good_results, played_predictions, avatar_url
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        snapshotId, player.id, player.pseudo, player.departmentCode, player.departmentName,
-        player.rank, player.points, player.exactScores ?? null, player.goodResults ?? null,
-        player.playedPredictions ?? null, player.avatarUrl ?? null,
-      ],
+    { sql: "DELETE FROM es_position_history WHERE snapshot_id = ?", args: [snapshotId] },
+    ...esPlayers.map((player, index): InStatement => ({
+      sql: `INSERT INTO es_position_history
+        (snapshot_id, player_id, pseudo, global_rank, escm_rank)
+        VALUES (?, ?, ?, ?, ?)`,
+      args: [snapshotId, player.id, player.pseudo, player.rank, index + 1],
     })),
   ];
+  await db.batch(statements, "write");
 
-  await getClient().batch(statements, "write");
   return {
     snapshotId,
     capturedAt,
-    playerCount: players.length,
+    playerCount: esPlayers.length,
     contestTitle,
     intervalMinutes,
     skipped: false,
   };
 }
 
-export interface HistoryPoint {
+export interface PositionPoint {
   capturedAt: string;
-  rank: number;
-  departmentRank: number;
-  points: number;
+  globalRank: number;
+  escmRank: number;
 }
 
-export interface PlayerHistorySeries {
+export interface PlayerPositionSeries {
   playerId: string;
   pseudo: string;
-  departmentCode: string;
-  departmentName: string;
-  currentRank: number;
-  currentDepartmentRank: number;
-  currentPoints: number;
-  rankChange: number;
-  departmentRankChange: number;
-  pointsChange: number;
-  points: HistoryPoint[];
+  currentGlobalRank: number;
+  currentEscmRank: number;
+  globalRankChange: number;
+  escmRankChange: number;
+  positions: PositionPoint[];
 }
 
 export interface HistoryDashboardData {
@@ -172,35 +190,27 @@ export interface HistoryDashboardData {
   lastCapturedAt: string | null;
   snapshotCount: number;
   playerCount: number;
-  filteredPlayerCount: number;
-  departmentFilter: string | null;
-  departments: Array<{
-    code: string;
-    name: string;
-    playerCount: number;
-  }>;
-  series: PlayerHistorySeries[];
+  series: PlayerPositionSeries[];
 }
 
 function numberValue(value: unknown): number {
   return typeof value === "bigint" ? Number(value) : Number(value ?? 0);
 }
 
-export async function getHistoryDashboard(
-  days = 7,
-  playerIds: string[] = [],
-  department?: string,
-): Promise<HistoryDashboardData> {
+export async function getHistoryDashboard(days = 7, playerIds: string[] = []): Promise<HistoryDashboardData> {
   await ensureHistorySchema();
   const db = getClient();
   const safeDays = Math.min(Math.max(Math.trunc(days) || 7, 1), 90);
   const since = new Date(Date.now() - safeDays * 86_400_000).toISOString();
-  const normalizedDepartment = department?.trim().toUpperCase() || null;
   const summary = await db.execute({
-    sql: `SELECT COUNT(*) AS snapshot_count, MIN(captured_at) AS first_captured_at,
-      MAX(captured_at) AS last_captured_at, MAX(player_count) AS player_count,
-      COALESCE(MAX(contest_title), 'MPP') AS contest_title
-      FROM standings_snapshots WHERE captured_at >= ?`,
+    sql: `SELECT COUNT(DISTINCT s.id) AS snapshot_count,
+      MIN(s.captured_at) AS first_captured_at,
+      MAX(s.captured_at) AS last_captured_at,
+      MAX(s.player_count) AS player_count,
+      COALESCE(MAX(s.contest_title), 'MPP') AS contest_title
+      FROM standings_snapshots s
+      JOIN es_position_history p ON p.snapshot_id = s.id
+      WHERE s.captured_at >= ?`,
     args: [since],
   });
   const snapshotCount = numberValue(summary.rows[0]?.["snapshot_count"]);
@@ -212,94 +222,58 @@ export async function getHistoryDashboard(
       lastCapturedAt: null,
       snapshotCount: 0,
       playerCount: 0,
-      filteredPlayerCount: 0,
-      departmentFilter: normalizedDepartment,
-      departments: [],
       series: [],
     };
   }
 
-  const latestSnapshotId = String((await db.execute(
-    "SELECT id FROM standings_snapshots ORDER BY captured_at DESC LIMIT 1"
-  )).rows[0]?.["id"] ?? "");
-  const departmentRows = await db.execute({
-    sql: `SELECT department_code, MAX(department_name) AS department_name, COUNT(*) AS player_count
-      FROM player_standings_history
-      WHERE snapshot_id = ?
-      GROUP BY department_code
-      ORDER BY department_code`,
-    args: [latestSnapshotId],
-  });
-  const departments = departmentRows.rows.map((row) => ({
-    code: String(row["department_code"]),
-    name: String(row["department_name"]),
-    playerCount: numberValue(row["player_count"]),
-  }));
-
-  let selectedIds = playerIds.filter(Boolean).slice(0, 12);
+  let selectedIds = playerIds.filter(Boolean).slice(0, 20);
   if (selectedIds.length === 0) {
-    const top = await db.execute({
-      sql: `SELECT h.player_id
-        FROM player_standings_history h
-        WHERE h.snapshot_id = ?
-          AND (? IS NULL OR h.department_code = ?)
-        ORDER BY h.rank ASC`,
-      args: [latestSnapshotId, normalizedDepartment, normalizedDepartment],
-    });
-    selectedIds = top.rows.map((row) => String(row["player_id"]));
+    const latest = await db.execute(`SELECT p.player_id
+      FROM es_position_history p
+      JOIN standings_snapshots s ON s.id = p.snapshot_id
+      WHERE s.id = (
+        SELECT s2.id FROM standings_snapshots s2
+        JOIN es_position_history p2 ON p2.snapshot_id = s2.id
+        ORDER BY s2.captured_at DESC LIMIT 1
+      )
+      ORDER BY p.escm_rank ASC`);
+    selectedIds = latest.rows.map((row) => String(row["player_id"]));
   }
 
   const placeholders = selectedIds.map(() => "?").join(",");
   const history = selectedIds.length === 0 ? { rows: [] } : await db.execute({
-    sql: `WITH ranked_history AS (
-        SELECT h.player_id, h.pseudo, h.department_code, h.department_name,
-          h.rank, h.points, h.snapshot_id,
-          ROW_NUMBER() OVER (
-            PARTITION BY h.snapshot_id, h.department_code
-            ORDER BY h.rank ASC, h.points DESC, h.player_id ASC
-          ) AS department_rank
-        FROM player_standings_history h
-      )
-      SELECT h.player_id, h.pseudo, h.department_code, h.department_name,
-        h.rank, h.department_rank, h.points, s.captured_at
-      FROM ranked_history h
-      JOIN standings_snapshots s ON s.id = h.snapshot_id
-      WHERE s.captured_at >= ? AND h.player_id IN (${placeholders})
-      ORDER BY s.captured_at ASC, h.rank ASC`,
+    sql: `SELECT p.player_id, p.pseudo, p.global_rank, p.escm_rank, s.captured_at
+      FROM es_position_history p
+      JOIN standings_snapshots s ON s.id = p.snapshot_id
+      WHERE s.captured_at >= ? AND p.player_id IN (${placeholders})
+      ORDER BY s.captured_at ASC, p.escm_rank ASC`,
     args: [since, ...selectedIds],
   });
 
-  const grouped = new Map<string, PlayerHistorySeries>();
+  const grouped = new Map<string, PlayerPositionSeries>();
   for (const row of history.rows) {
     const playerId = String(row["player_id"]);
-    const point: HistoryPoint = {
+    const point: PositionPoint = {
       capturedAt: String(row["captured_at"]),
-      rank: numberValue(row["rank"]),
-      departmentRank: numberValue(row["department_rank"]),
-      points: numberValue(row["points"]),
+      globalRank: numberValue(row["global_rank"]),
+      escmRank: numberValue(row["escm_rank"]),
     };
     const current = grouped.get(playerId);
     if (current) {
-      current.points.push(point);
-      current.currentRank = point.rank;
-      current.currentDepartmentRank = point.departmentRank;
-      current.currentPoints = point.points;
-      current.rankChange = current.points[0]!.rank - point.rank;
-      current.departmentRankChange = current.points[0]!.departmentRank - point.departmentRank;
-      current.pointsChange = point.points - current.points[0]!.points;
+      current.positions.push(point);
+      current.currentGlobalRank = point.globalRank;
+      current.currentEscmRank = point.escmRank;
+      current.globalRankChange = current.positions[0]!.globalRank - point.globalRank;
+      current.escmRankChange = current.positions[0]!.escmRank - point.escmRank;
     } else {
       grouped.set(playerId, {
         playerId,
         pseudo: String(row["pseudo"]),
-        departmentCode: String(row["department_code"]),
-        departmentName: String(row["department_name"]),
-        currentRank: point.rank,
-        currentDepartmentRank: point.departmentRank,
-        currentPoints: point.points,
-        rankChange: 0,
-        departmentRankChange: 0,
-        pointsChange: 0,
-        points: [point],
+        currentGlobalRank: point.globalRank,
+        currentEscmRank: point.escmRank,
+        globalRankChange: 0,
+        escmRankChange: 0,
+        positions: [point],
       });
     }
   }
@@ -311,9 +285,6 @@ export async function getHistoryDashboard(
     lastCapturedAt: String(summary.rows[0]?.["last_captured_at"] ?? "") || null,
     snapshotCount,
     playerCount: numberValue(summary.rows[0]?.["player_count"]),
-    filteredPlayerCount: grouped.size,
-    departmentFilter: normalizedDepartment,
-    departments,
-    series: [...grouped.values()].sort((a, b) => a.currentRank - b.currentRank),
+    series: [...grouped.values()].sort((a, b) => a.currentEscmRank - b.currentEscmRank),
   };
 }
