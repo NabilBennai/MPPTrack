@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MPP Track</title>
+
+    <link rel="stylesheet" href="/css/output.css" />
+    <script src="/js/htmx.min.js" defer></script>
+</head>
+
+<body class="bg-slate-950 text-white">
+<main class="min-h-screen flex flex-col items-center justify-center gap-6">
+    <h1 class="text-5xl font-bold">MPP Track</h1>
+
+    <button
+            class="rounded-lg bg-blue-600 px-4 py-2 font-semibold hover:bg-blue-500"
+            hx-get="/api/message"
+            hx-target="#result"
+    >
+        Charger un message
+    </button>
+
+    <div id="result" class="text-xl text-slate-300"></div>
+</main>
+</body>
+</html>

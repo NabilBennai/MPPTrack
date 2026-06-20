@@ -1,0 +1,29 @@
+{
+  "name": "mpp_track",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:css\"",
+    "dev:server": "tsx watch src/server.ts",
+    "dev:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^5.2.1",
+    "htmx.org": "^2.0.10"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.1",
+    "@types/node": "^26.0.0",
+    "concurrently": "^9.2.3",
+    "nodemon": "^3.1.14",
+    "tailwindcss": "^4.3.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}
