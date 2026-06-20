@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classement MPP — MPP Track</title>
+  <link rel="stylesheet" href="/css/output.css" />
+  <script src="/js/htmx.min.js" defer></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen">
+
+  <div class="max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
+
+    <!-- En-tête -->
+    <header class="flex items-center gap-4">
+      <a href="/"
+         class="text-slate-500 hover:text-slate-200 text-sm transition-colors">
+        ← Accueil
+      </a>
+      <h1 class="text-3xl font-extrabold tracking-tight">Classement MPP</h1>
+    </header>
+
+    <!-- Statistiques par département -->
+    <section class="flex flex-col gap-3">
+      <h2 class="text-base font-semibold text-slate-400 uppercase tracking-widest text-xs">
+        Statistiques par département
+      </h2>
+      <div
+        id="stats-container"
+        hx-get="/mpp/stats"
+        hx-trigger="load"
+        hx-swap="innerHTML"
+        class="min-h-24"
+      >
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+          <div class="h-28 rounded-lg bg-slate-800"></div>
+          <div class="h-28 rounded-lg bg-slate-800"></div>
+          <div class="h-28 rounded-lg bg-slate-800"></div>
+          <div class="h-28 rounded-lg bg-slate-800"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Classement -->
+    <section class="flex flex-col gap-3">
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <h2 class="text-base font-semibold text-slate-400 uppercase tracking-widest text-xs">
+          Classement général
+        </h2>
+        <div class="flex items-center gap-2">
+          <label for="dept-filter" class="text-sm text-slate-400">Département :</label>
+          <select
+            id="dept-filter"
+            name="department"
+            hx-get="/mpp/classement"
+            hx-target="#classement-container"
+            hx-trigger="change"
+            hx-swap="innerHTML"
+            class="bg-slate-800 border border-slate-600 text-white text-sm rounded-lg px-3 py-1.5
+                   focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          >
+            <option value="">Tous</option>
+            <option value="MT">MyTower</option>
+            <option value="ES">e-SCM</option>
+            <option value="TD">TDi</option>
+            <option value="UNKNOWN">Inconnu</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-700 bg-slate-900 overflow-hidden">
+        <div
+          id="classement-container"
+          hx-get="/mpp/classement"
+          hx-trigger="load"
+          hx-swap="innerHTML"
+        >
+          <div class="p-10 text-center text-slate-500 text-sm animate-pulse">
+            Chargement du classement…
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Détail joueur (panneau affiché dynamiquement) -->
+    <section>
+      <div id="player-detail" class="empty:hidden"></div>
+    </section>
+
+  </div>
+
+</body>
+</html>
