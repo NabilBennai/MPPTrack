@@ -3,7 +3,8 @@ import {
   mppIndexHandler,
   mppClassementHandler,
   mppStatsHandler,
-  mppPlayerDetailHandler,
+  mppPlayerExpandHandler,
+  mppPlayerCloseHandler,
   mppCacheInvalidateHandler,
   mppDebugUserHandler,
   mppDebugProbeHandler,
@@ -11,19 +12,13 @@ import {
 
 const router = Router();
 
-// ---------------------------------------------------------------------------
-// Routes principales
-// ---------------------------------------------------------------------------
-router.get("/",            mppIndexHandler);
-router.get("/classement",  mppClassementHandler);
-router.get("/stats",       mppStatsHandler);
-router.get("/player/:id",  mppPlayerDetailHandler);
-router.post("/cache/clear", mppCacheInvalidateHandler);
-
-// ---------------------------------------------------------------------------
-// Routes debug (développement uniquement — bloquées en production par le contrôleur)
-// ---------------------------------------------------------------------------
-router.get("/debug/user",  mppDebugUserHandler);
-router.get("/debug/probe", mppDebugProbeHandler);
+router.get("/",                    mppIndexHandler);
+router.get("/classement",          mppClassementHandler);
+router.get("/stats",               mppStatsHandler);
+router.get("/player/:id/close",    mppPlayerCloseHandler);
+router.get("/player/:id",          mppPlayerExpandHandler);
+router.post("/cache/clear",        mppCacheInvalidateHandler);
+router.get("/debug/user",          mppDebugUserHandler);
+router.get("/debug/probe",         mppDebugProbeHandler);
 
 export default router;

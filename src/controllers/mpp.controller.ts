@@ -14,7 +14,8 @@ import { hasToken } from "../services/mpp/mpp-api.client.js";
 import {
   renderClassement,
   renderStats,
-  renderPlayerDetail,
+  renderPlayerExpandRow,
+  renderPlayerCloseRow,
   renderError,
   renderDebugUser,
   renderDebugProbe,
@@ -72,21 +73,40 @@ export async function mppStatsHandler(_req: Request, res: Response): Promise<voi
 }
 
 // ---------------------------------------------------------------------------
-// Détail joueur (fragment HTMX)
+// Expand détail joueur — insère une sous-ligne dans le tableau
 // ---------------------------------------------------------------------------
-export async function mppPlayerDetailHandler(req: Request, res: Response): Promise<void> {
+export async function mppPlayerExpandHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { id }   = req.params as { id: string };
+    const players  = await getMppClassement();
+    const player   = players.find((p) => p.id === id);
+
+    if (!player) {
+      res.status(404).send(`<tr id="detail-${id}"></tr>`);
+      return;
+    }
+    res.send(renderPlayerExpandRow(player));
+  } catch (_err) {
+    res.status(500).send(renderError("Erreur lors du chargement du joueur."));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Close détail joueur — supprime la sous-ligne
+// ---------------------------------------------------------------------------
+export async function mppPlayerCloseHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id }  = req.params as { id: string };
     const players = await getMppClassement();
     const player  = players.find((p) => p.id === id);
 
     if (!player) {
-      res.status(404).send(`<p class="text-red-400 text-center py-4 text-sm">Joueur introuvable.</p>`);
+      res.send(`<tr id="detail-${id}"></tr>`);
       return;
     }
-    res.send(renderPlayerDetail(player));
+    res.send(renderPlayerCloseRow(player));
   } catch (_err) {
-    res.status(500).send(renderError("Erreur lors du chargement du joueur."));
+    res.send(`<tr id="detail-${req.params["id"] ?? ""}"></tr>`);
   }
 }
 
@@ -95,7 +115,7 @@ export async function mppPlayerDetailHandler(req: Request, res: Response): Promi
 // ---------------------------------------------------------------------------
 export function mppCacheInvalidateHandler(_req: Request, res: Response): void {
   invalidateCache();
-  res.send(`<p class="text-green-400 text-sm text-center py-2">✓ Cache vidé.</p>`);
+  res.send(`<span class="text-green-400">✓ Actualisé</span>`);
 }
 
 // ---------------------------------------------------------------------------
@@ -133,9 +153,7 @@ export async function mppDebugProbeHandler(req: Request, res: Response): Promise
     : process.env["MPP_CHALLENGE_ID"];
 
   if (!challengeId) {
-    res.status(400).send(renderError(
-      "Paramètre challengeId manquant. Exemple : /mpp/debug/probe?challengeId=mpp_challenge_UBXC3UXL"
-    ));
+    res.status(400).send(renderError("Paramètre challengeId manquant."));
     return;
   }
 
