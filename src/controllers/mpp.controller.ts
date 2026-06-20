@@ -20,6 +20,10 @@ import {
   renderDebugUser,
   renderDebugProbe,
 } from "../views/mpp/templates.js";
+import {
+  captureStandingsSnapshot,
+  getHistoryDashboard,
+} from "../services/history/standings-history.service.js";
 
 function isDev(): boolean {
   return process.env["NODE_ENV"] !== "production";
@@ -38,6 +42,41 @@ function formatDate(): string {
 // ---------------------------------------------------------------------------
 export async function mppIndexHandler(_req: Request, res: Response): Promise<void> {
   res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "index.html"));
+}
+
+export async function mppHistoryPageHandler(_req: Request, res: Response): Promise<void> {
+  res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "history.html"));
+}
+
+export async function mppHistoryDataHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const days = typeof req.query["days"] === "string" ? Number(req.query["days"]) : 7;
+    const players = typeof req.query["players"] === "string"
+      ? req.query["players"].split(",").map((value) => value.trim()).filter(Boolean)
+      : [];
+    const department = typeof req.query["department"] === "string"
+      ? req.query["department"]
+      : undefined;
+    res.json(await getHistoryDashboard(days, players, department));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Historique indisponible.";
+    res.status(500).json({ error: message });
+  }
+}
+
+export async function mppSnapshotCronHandler(req: Request, res: Response): Promise<void> {
+  const cronSecret = process.env["CRON_SECRET"];
+  if (!cronSecret || req.get("authorization") !== `Bearer ${cronSecret}`) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    res.json({ ok: true, ...await captureStandingsSnapshot() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Capture impossible.";
+    console.error("[snapshot]", error);
+    res.status(500).json({ ok: false, error: message });
+  }
 }
 
 // ---------------------------------------------------------------------------

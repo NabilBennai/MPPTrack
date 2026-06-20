@@ -8,11 +8,17 @@ import {
   mppCacheInvalidateHandler,
   mppDebugUserHandler,
   mppDebugProbeHandler,
+  mppHistoryPageHandler,
+  mppHistoryDataHandler,
+  mppSnapshotCronHandler,
 } from "../controllers/mpp.controller.js";
 
 const router = Router();
 
 router.get("/",                    mppIndexHandler);
+router.get("/history",             mppHistoryPageHandler);
+router.get("/api/history",         mppHistoryDataHandler);
+router.get("/api/cron/snapshot",   mppSnapshotCronHandler);
 router.get("/classement",          mppClassementHandler);
 router.get("/stats",               mppStatsHandler);
 router.get("/player/:id/close",    mppPlayerCloseHandler);

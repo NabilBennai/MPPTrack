@@ -5,6 +5,12 @@
       "includeFiles": "public/**,src/views/**"
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/snapshot",
+      "schedule": "* * * * *"
+    }
+  ],
   "routes": [
     { "src": "/(.*)", "dest": "/api/index.ts" }
   ]

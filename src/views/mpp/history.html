@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historique · MPP Track</title>
+  <link rel="stylesheet" href="/css/output.css">
+</head>
+<body class="history-body">
+  <header class="history-header">
+    <a href="/" class="history-brand">
+      <span class="history-logo">⚽</span>
+      <span class="font-oswald">MPP<span>TRACK</span></span>
+    </a>
+    <nav class="history-nav">
+      <a href="/">Classement</a>
+      <a href="/history" aria-current="page">Historique</a>
+    </nav>
+    <label class="history-range">
+      <span>Période</span>
+      <select id="range-select">
+        <option value="1">24 heures</option>
+        <option value="7" selected>7 jours</option>
+        <option value="30">30 jours</option>
+        <option value="90">90 jours</option>
+      </select>
+    </label>
+  </header>
+
+  <main class="history-main">
+    <section class="history-hero">
+      <div>
+        <p class="history-eyebrow">e‑SCM · Observatoire du classement</p>
+        <h1 class="font-oswald">La dynamique e‑SCM.</h1>
+        <p id="history-subtitle">Chargement des instantanés enregistrés dans Turso…</p>
+      </div>
+      <div class="history-live"><span class="history-live-dot"></span><span id="frequency-label">Capture automatique configurée</span></div>
+    </section>
+
+    <section class="escm-banner">
+      <div class="escm-mark">ES</div>
+      <div><span>Périmètre verrouillé</span><strong>Équipe e‑SCM uniquement</strong></div>
+      <p id="filtered-count"></p>
+    </section>
+
+    <section id="metric-grid" class="history-metrics" aria-live="polite">
+      <div class="history-skeleton"></div><div class="history-skeleton"></div>
+      <div class="history-skeleton"></div><div class="history-skeleton"></div>
+    </section>
+
+    <section id="empty-state" class="history-empty" hidden>
+      <div class="history-empty-icon">⌁</div>
+      <h2 class="font-oswald">La chronologie démarre ici</h2>
+      <p>Aucun instantané n’est encore enregistré. Le premier apparaîtra après l’exécution du cron horaire.</p>
+      <code>GET /api/cron/snapshot</code>
+    </section>
+
+    <section id="dashboard" class="history-dashboard" hidden>
+      <article class="history-panel history-panel-wide">
+        <div class="history-panel-heading">
+          <div><p>Trajectoire des points</p><h2 class="font-oswald">Progression cumulée</h2></div>
+          <div id="points-legend" class="history-legend"></div>
+        </div>
+        <div class="history-chart-shell">
+          <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+          <div id="points-chart" class="history-chart"></div>
+        </div>
+      </article>
+
+      <article class="history-panel">
+        <div class="history-panel-heading"><div><p>Mouvement</p><h2 class="font-oswald">Rangs actuels</h2></div></div>
+        <div id="rank-list" class="history-rank-list"></div>
+      </article>
+
+      <article class="history-panel history-panel-wide">
+        <div class="history-panel-heading">
+          <div><p>Chronologie</p><h2 class="font-oswald">Derniers relevés</h2></div>
+          <span id="snapshot-label" class="history-muted"></span>
+        </div>
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead><tr><th>Joueur</th><th>Rang global</th><th>Rang e‑SCM</th><th>Points</th><th>Gagnés</th><th>Dernier relevé</th></tr></thead>
+            <tbody id="history-table-body"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const colors = ['#7c6bf8','#10d48a','#3b9eff','#f5c84a','#ff7a3d','#d09bff','#55d5e0','#f06f9b'];
+    const fmt = new Intl.NumberFormat('fr-FR');
+    const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Paris' });
+    const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+    const activeDepartment = 'ES';
+
+    function metric(label, value, note, accent) {
+      return `<article class="history-metric" style="--metric-accent:${accent}">
+        <span>${label}</span><strong class="font-oswald">${value}</strong><small>${note}</small>
+      </article>`;
+    }
+    function movement(value, rank = false) {
+      if (value === 0) return `<span class="movement neutral">— stable</span>`;
+      const good = value > 0;
+      return `<span class="movement ${good ? 'up' : 'down'}">${good ? '↑' : '↓'} ${Math.abs(value)} ${rank ? (Math.abs(value) > 1 ? 'places' : 'place') : 'pts'}</span>`;
+    }
+    function renderChart(series) {
+      const all = series.flatMap(s => s.points.map(p => p.points));
+      const width = 1000, height = 390, padX = 62, padTop = 32, padBottom = 48;
+      const plotHeight = height - padTop - padBottom;
+      const min = Math.min(...all), max = Math.max(...all), span = Math.max(max - min, 1);
+      const maxLen = Math.max(...series.map(s => s.points.length), 2);
+      const x = i => padX + (i / (maxLen - 1)) * (width - padX * 2);
+      const y = value => padTop + ((max - value) / span) * plotHeight;
+      const smoothPath = coords => coords.reduce((path, point, index) => {
+        if (index === 0) return `M ${point[0]} ${point[1]}`;
+        const previous = coords[index - 1];
+        const midX = (previous[0] + point[0]) / 2;
+        return `${path} C ${midX} ${previous[1]}, ${midX} ${point[1]}, ${point[0]} ${point[1]}`;
+      }, '');
+      const grid = [0,.25,.5,.75,1].map(r => {
+        const yy = padTop + r * plotHeight;
+        return `<line x1="${padX}" y1="${yy}" x2="${width-padX}" y2="${yy}" class="chart-grid"/>
+          <text x="${padX-12}" y="${yy+4}" class="chart-label">${fmt.format(Math.round(max-r*span))}</text>`;
+      }).join('');
+      const longest = [...series].sort((a,b) => b.points.length-a.points.length)[0];
+      const labelIndexes = [...new Set([0, Math.floor((maxLen-1)/2), maxLen-1])];
+      const timeLabels = labelIndexes.map(index => {
+        const point = longest.points[Math.min(index, longest.points.length-1)];
+        const label = new Intl.DateTimeFormat('fr-FR', {
+          day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris'
+        }).format(new Date(point.capturedAt));
+        return `<text x="${x(index)}" y="${height-14}" class="chart-time-label">${label}</text>`;
+      }).join('');
+      const lines = series.map((s, idx) => {
+        const coords = s.points.map((p, i) => [x(i), y(p.points)]);
+        const path = smoothPath(coords);
+        const last = s.points[s.points.length - 1];
+        const color = colors[idx % colors.length];
+        const leaderArea = idx === 0
+          ? `<path d="${path} L ${coords[coords.length-1][0]} ${padTop+plotHeight} L ${coords[0][0]} ${padTop+plotHeight} Z" fill="url(#leader-area)"/>`
+          : '';
+        return `${leaderArea}<path d="${path}" class="chart-series ${idx === 0 ? 'chart-series-leader' : ''}" data-series="${idx}" fill="none" stroke="${color}" stroke-width="${idx === 0 ? 4 : 2}" stroke-opacity="${idx === 0 ? 1 : .64}" stroke-linecap="round" stroke-linejoin="round">
+          <title>${escapeHtml(s.pseudo)} · ${fmt.format(last.points)} points</title>
+        </path>
+          <circle cx="${x(s.points.length-1)}" cy="${y(last.points)}" r="${idx === 0 ? 6 : 4}" fill="${color}" stroke="#12101c" stroke-width="3">
+            <title>${escapeHtml(s.pseudo)} · ${fmt.format(last.points)} points</title>
+          </circle>`;
+      }).join('');
+      document.getElementById('points-chart').innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Évolution des points e-SCM">
+        <defs>
+          <linearGradient id="leader-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a855f7" stop-opacity=".28"/><stop offset="1" stop-color="#a855f7" stop-opacity="0"/></linearGradient>
+          <filter id="leader-glow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <rect x="${padX}" y="${padTop}" width="${width-padX*2}" height="${plotHeight}" rx="14" class="chart-plot-bg"/>
+        ${grid}${timeLabels}${lines}
+        <line id="chart-crosshair" x1="0" y1="${padTop}" x2="0" y2="${padTop+plotHeight}" class="chart-crosshair" visibility="hidden"/>
+        <rect id="chart-hitbox" x="${padX}" y="${padTop}" width="${width-padX*2}" height="${plotHeight}" fill="transparent"/>
+      </svg>`;
+      document.getElementById('points-legend').innerHTML = series.map((s, idx) =>
+        `<button type="button" data-series="${idx}"><i style="background:${colors[idx % colors.length]}"></i><span>${escapeHtml(s.pseudo)}</span><b>${fmt.format(s.currentPoints)}</b></button>`).join('');
+      bindChartInteractions(series, { width, padX, padTop, plotHeight, maxLen, x });
+    }
+    function bindChartInteractions(series, dimensions) {
+      const svg = document.querySelector('#points-chart svg');
+      const hitbox = document.getElementById('chart-hitbox');
+      const crosshair = document.getElementById('chart-crosshair');
+      const tooltip = document.getElementById('chart-tooltip');
+      const highlight = index => {
+        svg.querySelectorAll('.chart-series').forEach(path => {
+          const active = index === null || Number(path.dataset.series) === index;
+          path.style.opacity = active ? '1' : '.12';
+          path.style.strokeWidth = active && index !== null ? '4.5' : '';
+        });
+      };
+      document.querySelectorAll('#points-legend button').forEach(button => {
+        button.addEventListener('mouseenter', () => highlight(Number(button.dataset.series)));
+        button.addEventListener('mouseleave', () => highlight(null));
+      });
+      hitbox.addEventListener('mousemove', event => {
+        const rect = svg.getBoundingClientRect();
+        const svgX = (event.clientX-rect.left)/rect.width*dimensions.width;
+        const ratio = Math.max(0,Math.min(1,(svgX-dimensions.padX)/(dimensions.width-dimensions.padX*2)));
+        const index = Math.round(ratio*(dimensions.maxLen-1));
+        const crossX = dimensions.x(index);
+        crosshair.setAttribute('x1',crossX); crosshair.setAttribute('x2',crossX); crosshair.setAttribute('visibility','visible');
+        const available = series.filter(s => s.points[Math.min(index,s.points.length-1)]).map((s,idx) => ({
+          pseudo:s.pseudo, color:colors[idx%colors.length], point:s.points[Math.min(index,s.points.length-1)]
+        })).sort((a,b) => b.point.points-a.point.points);
+        const timestamp = available[0]?.point.capturedAt;
+        tooltip.innerHTML = `<strong>${timestamp ? dateFmt.format(new Date(timestamp)) : ''}</strong>${available.map(item =>
+          `<span><i style="background:${item.color}"></i><b>${escapeHtml(item.pseudo)}</b><em>${fmt.format(item.point.points)} pts</em></span>`).join('')}`;
+        tooltip.hidden = false;
+        tooltip.style.left = `${Math.min(Math.max(event.clientX-rect.left+18,12),rect.width-230)}px`;
+        tooltip.style.top = `${Math.max(event.clientY-rect.top-40,10)}px`;
+      });
+      hitbox.addEventListener('mouseleave', () => {
+        crosshair.setAttribute('visibility','hidden'); tooltip.hidden = true; highlight(null);
+      });
+    }
+    function renderDepartmentScope(data) {
+      document.getElementById('filtered-count').textContent =
+        `${fmt.format(data.filteredPlayerCount)} membre${data.filteredPlayerCount > 1 ? 's' : ''} suivi${data.filteredPlayerCount > 1 ? 's' : ''}`;
+    }
+    function render(data) {
+      document.getElementById('history-subtitle').textContent = data.lastCapturedAt
+        ? `${data.contestTitle} · dernier relevé ${dateFmt.format(new Date(data.lastCapturedAt))}`
+        : 'Aucun relevé disponible pour cette période.';
+      document.getElementById('frequency-label').textContent =
+        `Capture toutes les ${data.intervalMinutes} minute${data.intervalMinutes > 1 ? 's' : ''}`;
+      renderDepartmentScope(data);
+      const best = [...data.series].sort((a,b) => b.rankChange-a.rankChange)[0];
+      document.getElementById('metric-grid').innerHTML = [
+        metric('Instantanés', fmt.format(data.snapshotCount), `un relevé / ${data.intervalMinutes} min`, '#7c6bf8'),
+        metric('Membres e‑SCM', fmt.format(data.filteredPlayerCount), 'périmètre exclusif', '#a855f7'),
+        metric('Leader', data.series[0] ? escapeHtml(data.series[0].pseudo) : '—', data.series[0] ? `${fmt.format(data.series[0].currentPoints)} points` : 'en attente', '#f5c84a'),
+        metric('Plus forte hausse', best && best.rankChange > 0 ? escapeHtml(best.pseudo) : '—', 'sur la période sélectionnée', '#10d48a')
+      ].join('');
+      const empty = data.snapshotCount === 0 || data.series.length === 0;
+      document.getElementById('empty-state').hidden = !empty;
+      document.getElementById('dashboard').hidden = empty;
+      if (empty) return;
+      renderChart(data.series);
+      document.getElementById('rank-list').innerHTML = data.series.map((s, idx) => `
+        <div class="history-rank-row">
+          <div class="rank-pair">
+            <span><small>Global</small><strong class="font-oswald">${s.currentRank}</strong>${movement(s.rankChange,true)}</span>
+            <span><small>e‑SCM</small><strong class="font-oswald">${s.currentDepartmentRank}</strong>${movement(s.departmentRankChange,true)}</span>
+          </div>
+          <i style="background:${colors[idx % colors.length]}"></i>
+          <div><b>${escapeHtml(s.pseudo)}</b><small>${fmt.format(s.currentPoints)} points</small></div>
+        </div>`).join('');
+      document.getElementById('snapshot-label').textContent = `${data.snapshotCount} instantané${data.snapshotCount > 1 ? 's' : ''}`;
+      document.getElementById('history-table-body').innerHTML = data.series.map(s => `
+        <tr><td><b>${escapeHtml(s.pseudo)}</b><small>${escapeHtml(s.departmentName)}</small></td>
+          <td><strong class="table-rank font-oswald">#${s.currentRank}</strong>${movement(s.rankChange,true)}</td>
+          <td><strong class="table-rank table-rank-escm font-oswald">#${s.currentDepartmentRank}</strong>${movement(s.departmentRankChange,true)}</td>
+          <td class="font-oswald">${fmt.format(s.currentPoints)}</td><td>${movement(s.pointsChange)}</td>
+          <td>${dateFmt.format(new Date(s.points[s.points.length-1].capturedAt))}</td></tr>`).join('');
+    }
+    async function loadHistory() {
+      try {
+        const params = new URLSearchParams({
+          days: document.getElementById('range-select').value,
+          department: activeDepartment
+        });
+        const response = await fetch(`/api/history?${params}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Erreur');
+        render(data);
+      } catch (error) {
+        document.getElementById('metric-grid').innerHTML = '';
+        const empty = document.getElementById('empty-state');
+        empty.hidden = false;
+        empty.querySelector('h2').textContent = 'Historique indisponible';
+        empty.querySelector('p').textContent = error.message;
+      }
+    }
+    document.getElementById('range-select').addEventListener('change', loadHistory);
+    loadHistory();
+  </script>
+</body>
+</html>
