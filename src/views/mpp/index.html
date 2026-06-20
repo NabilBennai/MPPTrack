@@ -1,92 +1,91 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" style="height:100dvh;overflow:hidden">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MPP Track</title>
   <link rel="stylesheet" href="/css/output.css" />
   <script src="/js/htmx.min.js" defer></script>
-  <style>
-    .filter-pill { transition: background .15s, color .15s, border-color .15s; }
-    .fp-all[data-active]  { background: #e2e8f0; color: #0f172a; border-color: #e2e8f0; }
-    .fp-MT[data-active]   { background: #1d4ed8; color: #fff;    border-color: #1d4ed8; }
-    .fp-ES[data-active]   { background: #7c3aed; color: #fff;    border-color: #7c3aed; }
-    .fp-TD[data-active]   { background: #059669; color: #fff;    border-color: #059669; }
-    .fp-WD[data-active]   { background: #ea580c; color: #fff;    border-color: #ea580c; }
-    .fp-UNK[data-active]  { background: #475569; color: #fff;    border-color: #475569; }
-  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen antialiased">
+<body style="height:100dvh;overflow:hidden;display:flex;flex-direction:column">
 
-  <!-- Header -->
-  <header class="sticky top-0 z-20 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800/60">
-    <div class="px-6 h-13 flex items-center gap-3">
-      <span class="text-xl leading-none select-none">⚽</span>
-      <span class="font-bold text-lg tracking-tight">MPP Track</span>
-      <div class="ml-auto flex items-center gap-2">
-        <span id="cache-status" class="text-xs text-slate-500"></span>
+  <!-- ── Header ──────────────────────────────────────────────────────── -->
+  <header style="flex-shrink:0;position:sticky;top:0;z-index:20;background:rgba(6,9,15,0.94);border-bottom:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(14px)">
+    <div class="px-5 sm:px-8" style="height:56px;display:flex;align-items:center;gap:16px">
+
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;background:rgba(170,238,68,0.1);border:1px solid rgba(170,238,68,0.22)">⚽</div>
+        <span class="font-oswald" style="font-size:20px;font-weight:700;letter-spacing:0.12em;color:#dce9f8;user-select:none">MPP<span style="color:#aaee44">TRACK</span></span>
+      </div>
+
+      <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+        <span id="cache-status" style="font-size:12px;color:#4e6278"></span>
         <button
-          class="text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors"
+          style="font-size:12px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);color:#4e6278;background:transparent;cursor:pointer;transition:color 0.12s,border-color 0.12s"
+          onmouseover="this.style.color='#dce9f8';this.style.borderColor='rgba(255,255,255,0.18)'"
+          onmouseout="this.style.color='#4e6278';this.style.borderColor='rgba(255,255,255,0.08)'"
           hx-post="/cache/clear"
           hx-target="#cache-status"
           hx-swap="innerHTML"
         >↺ Actualiser</button>
       </div>
+
     </div>
   </header>
 
-  <main class="px-6 py-6 flex flex-col gap-5">
+  <!-- ── Main — flex column, fills remaining height ──────────────────── -->
+  <main class="px-5 sm:px-8" style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:20px;padding-top:28px;padding-bottom:0">
 
-    <!-- Stats par département -->
-    <div id="stats-container" hx-get="/stats" hx-trigger="load" hx-swap="innerHTML">
+    <!-- Stats — fixed height -->
+    <div id="stats-container" style="flex-shrink:0" hx-get="/stats" hx-trigger="load" hx-swap="innerHTML">
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="h-20 rounded-xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
-        <div class="h-20 rounded-xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
-        <div class="h-20 rounded-xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
-        <div class="h-20 rounded-xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
+        <div style="height:72px;border-radius:8px" class="shimmer"></div>
+        <div style="height:72px;border-radius:8px;animation-delay:0.1s" class="shimmer"></div>
+        <div style="height:72px;border-radius:8px;animation-delay:0.2s" class="shimmer"></div>
+        <div style="height:72px;border-radius:8px;animation-delay:0.3s" class="shimmer"></div>
       </div>
     </div>
 
-    <!-- Classement -->
-    <div class="flex flex-col gap-3">
+    <!-- Classement — flex column, fills rest -->
+    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:12px;min-height:0">
 
-      <!-- Filtres -->
-      <div id="dept-filters" class="flex flex-wrap gap-2">
-        <button class="filter-pill fp-all px-3.5 py-1 rounded-full text-sm font-medium border border-slate-500 text-slate-200"
-          data-dept="" data-active hx-get="/classement" hx-target="#classement-container" hx-swap="innerHTML">Tous</button>
-        <button class="filter-pill fp-MT px-3.5 py-1 rounded-full text-sm font-medium border border-blue-800 text-blue-300"
-          data-dept="MT" hx-get="/classement?department=MT" hx-target="#classement-container" hx-swap="innerHTML">MyTower</button>
-        <button class="filter-pill fp-ES px-3.5 py-1 rounded-full text-sm font-medium border border-purple-800 text-purple-300"
-          data-dept="ES" hx-get="/classement?department=ES" hx-target="#classement-container" hx-swap="innerHTML">e-SCM</button>
-        <button class="filter-pill fp-TD px-3.5 py-1 rounded-full text-sm font-medium border border-emerald-800 text-emerald-300"
-          data-dept="TD" hx-get="/classement?department=TD" hx-target="#classement-container" hx-swap="innerHTML">TDi</button>
-        <button class="filter-pill fp-WD px-3.5 py-1 rounded-full text-sm font-medium border border-orange-800 text-orange-300"
-          data-dept="WD" hx-get="/classement?department=WD" hx-target="#classement-container" hx-swap="innerHTML">Winddle</button>
+      <!-- Filter tabs — fixed -->
+      <div id="dept-filters" style="flex-shrink:0;display:flex;flex-wrap:wrap;gap:6px">
+        <button class="dept-tab fp-all" data-dept="" data-active
+          hx-get="/classement" hx-target="#classement-container" hx-swap="innerHTML">Tous</button>
+        <button class="dept-tab fp-MT" data-dept="MT"
+          hx-get="/classement?department=MT" hx-target="#classement-container" hx-swap="innerHTML">MyTower</button>
+        <button class="dept-tab fp-ES" data-dept="ES"
+          hx-get="/classement?department=ES" hx-target="#classement-container" hx-swap="innerHTML">e-SCM</button>
+        <button class="dept-tab fp-TD" data-dept="TD"
+          hx-get="/classement?department=TD" hx-target="#classement-container" hx-swap="innerHTML">TDi</button>
+        <button class="dept-tab fp-WD" data-dept="WD"
+          hx-get="/classement?department=WD" hx-target="#classement-container" hx-swap="innerHTML">Winddle</button>
       </div>
 
-      <!-- Tableau -->
-      <div class="rounded-xl border border-slate-800 overflow-hidden bg-slate-900/30">
+      <!-- Table wrapper — scrollable, fills remaining space -->
+      <div style="flex:1;min-height:0;border-radius:12px;border:1px solid rgba(255,255,255,0.07);background:#0b1018;overflow-y:auto;overflow-x:hidden">
         <div id="classement-container" hx-get="/classement" hx-trigger="load" hx-swap="innerHTML">
-          <div class="py-14 flex flex-col items-center gap-3 text-slate-600">
-            <div class="w-6 h-6 border-2 border-slate-700 border-t-slate-400 rounded-full animate-spin"></div>
-            <span class="text-sm">Chargement…</span>
+          <div style="padding:64px 0;display:flex;flex-direction:column;align-items:center;gap:12px;color:#243040">
+            <div style="width:20px;height:20px;border-radius:50%;border:2px solid #243040;border-top-color:transparent" class="animate-spin"></div>
+            <span style="font-size:14px">Chargement…</span>
           </div>
         </div>
       </div>
-    </div>
 
+    </div>
   </main>
 
   <script>
     function setActivePill(dept) {
-      document.querySelectorAll('.filter-pill').forEach(p => {
-        if (p.dataset.dept === String(dept)) p.setAttribute('data-active', '');
+      document.querySelectorAll('.dept-tab').forEach(p => {
+        if (String(p.dataset.dept) === String(dept)) p.setAttribute('data-active', '');
         else p.removeAttribute('data-active');
       });
     }
     document.getElementById('dept-filters').addEventListener('click', e => {
-      const btn = e.target.closest('.filter-pill');
-      if (btn) setActivePill(btn.dataset.dept);
+      const btn = e.target.closest('.dept-tab');
+      if (btn) setActivePill(btn.dataset.dept ?? '');
     });
   </script>
 

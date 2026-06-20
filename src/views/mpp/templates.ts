@@ -26,71 +26,144 @@ function pct(num: number | undefined, den: number | undefined): string {
   return `${Math.round((num / den) * 100)}%`;
 }
 
-function deptBadge(code: DepartmentCode): string {
+// ---------------------------------------------------------------------------
+// Design helpers
+// ---------------------------------------------------------------------------
+function deptColor(code: DepartmentCode): { solid: string; dim: string; text: string; border: string } {
   switch (code) {
-    case "MT": return "bg-blue-900/60 text-blue-300 border border-blue-700/60";
-    case "ES": return "bg-purple-900/60 text-purple-300 border border-purple-700/60";
-    case "TD": return "bg-emerald-900/60 text-emerald-300 border border-emerald-700/60";
-    case "WD": return "bg-orange-900/60 text-orange-300 border border-orange-700/60";
-    default:   return "bg-slate-700/60 text-slate-400 border border-slate-600/60";
+    case "MT": return { solid: "#3b82f6", dim: "rgba(59,130,246,0.1)",  text: "#93c5fd", border: "rgba(59,130,246,0.25)"  };
+    case "ES": return { solid: "#8b5cf6", dim: "rgba(139,92,246,0.1)",  text: "#c4b5fd", border: "rgba(139,92,246,0.25)"  };
+    case "TD": return { solid: "#10b981", dim: "rgba(16,185,129,0.1)",  text: "#6ee7b7", border: "rgba(16,185,129,0.25)"  };
+    case "WD": return { solid: "#f97316", dim: "rgba(249,115,22,0.1)",  text: "#fdba74", border: "rgba(249,115,22,0.25)"  };
+    default:   return { solid: "#64748b", dim: "rgba(100,116,139,0.08)", text: "#94a3b8", border: "rgba(100,116,139,0.2)" };
   }
 }
 
-function deptRing(code: DepartmentCode): string {
+function deptRowFill(code: DepartmentCode): string {
   switch (code) {
-    case "MT": return "ring-blue-600";
-    case "ES": return "ring-purple-600";
-    case "TD": return "ring-emerald-600";
-    case "WD": return "ring-orange-600";
-    default:   return "ring-slate-600";
+    case "MT": return "rgba(59,130,246,0.055)";
+    case "ES": return "rgba(139,92,246,0.055)";
+    case "TD": return "rgba(16,185,129,0.055)";
+    case "WD": return "rgba(249,115,22,0.055)";
+    default:   return "rgba(100,116,139,0.04)";
   }
 }
 
-function deptAccent(code: DepartmentCode): string {
-  switch (code) {
-    case "MT": return "text-blue-400    border-blue-700    hover:bg-blue-950/40   bg-blue-950/20";
-    case "ES": return "text-purple-400  border-purple-700  hover:bg-purple-950/40 bg-purple-950/20";
-    case "TD": return "text-emerald-400 border-emerald-700 hover:bg-emerald-950/40 bg-emerald-950/20";
-    case "WD": return "text-orange-400  border-orange-700  hover:bg-orange-950/40 bg-orange-950/20";
-    default:   return "text-slate-400   border-slate-600   hover:bg-slate-800/40  bg-slate-800/20";
-  }
+function deptBadge(code: DepartmentCode, name: string): string {
+  const c = deptColor(code);
+  return `<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:${c.dim};color:${c.text};border:1px solid ${c.border};letter-spacing:0.02em;white-space:nowrap">${esc(name)}</span>`;
 }
 
-function avatarImg(p: MppPlayer, size: string): string {
-  const ring     = deptRing(p.departmentCode);
-  const cls      = `${size} rounded-full object-cover ring-2 ${ring} bg-slate-800 shrink-0`;
+function avatarImg(p: MppPlayer, px: number): string {
+  const c        = deptColor(p.departmentCode);
   const initials = esc(p.pseudo.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase() || "??");
+  const base     = `width:${px}px;height:${px}px;border-radius:50%;flex-shrink:0;outline:2px solid ${c.solid};outline-offset:1.5px;`;
   if (p.avatarUrl) {
-    return `<img src="${esc(p.avatarUrl)}" alt="" class="${cls}" loading="lazy">`;
+    return `<img src="${esc(p.avatarUrl)}" alt="" style="${base}object-fit:cover;background:#101520" loading="lazy">`;
   }
-  return `<div class="${cls} flex items-center justify-center text-xs font-bold text-slate-300">${initials}</div>`;
+  return `<div style="${base}background:#0f1828;display:flex;align-items:center;justify-content:center;font-size:${Math.round(px * 0.3)}px;font-weight:700;color:${c.text};font-family:'Manrope',sans-serif">${initials}</div>`;
 }
 
-function rankDisplay(rank: number): string {
-  if (rank === 1) return "🥇";
-  if (rank === 2) return "🥈";
-  if (rank === 3) return "🥉";
-  return `<span class="font-semibold text-slate-400 tabular-nums">${rank}</span>`;
+function rankDisplay(rank: number, isFiltered: boolean, globalRank?: number): string {
+  const numStyle = (color: string, size: string) =>
+    `<span class="font-oswald" style="color:${color};font-size:${size};font-weight:700;line-height:1">${rank}</span>`;
+
+  let primary: string;
+  if (rank === 1) primary = numStyle("#f4c340", "1.35rem");
+  else if (rank === 2) primary = numStyle("#96afc4", "1.35rem");
+  else if (rank === 3) primary = numStyle("#c87a42", "1.35rem");
+  else primary = numStyle("#243040", "1rem");
+
+  if (isFiltered && globalRank !== undefined) {
+    return `<div style="display:flex;flex-direction:column;gap:2px">
+      ${primary}
+      <span style="font-size:10px;color:#243040;font-family:'Manrope',sans-serif;line-height:1">#${globalRank} gén.</span>
+    </div>`;
+  }
+  return primary;
 }
 
 // ---------------------------------------------------------------------------
-// Expand button (shared between initial render and OOB resets)
+// Expand / close button
 // ---------------------------------------------------------------------------
 function expandBtn(playerId: string, open: boolean): string {
-  const base = "w-7 h-7 rounded-lg border transition-colors flex items-center justify-center mx-auto";
-  const cls  = open
-    ? `${base} bg-blue-600 border-blue-500 text-white`
-    : `${base} bg-slate-800 border-slate-700 text-slate-400 hover:bg-blue-600 hover:border-blue-500 hover:text-white`;
   const endpoint = open ? `/player/${playerId}/close` : `/player/${playerId}`;
-  const icon     = open ? "▾" : "▸";
+  const s = open
+    ? "background:rgba(170,238,68,0.12);border:1px solid rgba(170,238,68,0.28);color:#aaee44"
+    : "background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#4e6278";
   return `<button
-    id="btn-${playerId}"
-    class="${cls}"
+    id="btn-${esc(playerId)}"
+    style="${s};width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;margin:0 auto;cursor:pointer;transition:background 0.12s,color 0.12s,border-color 0.12s;font-size:10px"
     hx-get="${endpoint}"
-    hx-target="#detail-${playerId}"
+    hx-target="#detail-${esc(playerId)}"
     hx-swap="outerHTML"
     title="${open ? "Fermer" : "Voir le détail"}"
-  >${icon}</button>`;
+  >${open ? "▲" : "▼"}</button>`;
+}
+
+// ---------------------------------------------------------------------------
+// Pagination helper
+// ---------------------------------------------------------------------------
+function paginationBar(
+  current: number,
+  total: number,
+  totalRows: number,
+  pageSize: number,
+  deptParam: string,
+): string {
+  if (total <= 1) return "";
+
+  const pageUrl = (n: number) =>
+    deptParam
+      ? `/classement?department=${deptParam}&page=${n}`
+      : `/classement?page=${n}`;
+
+  const pageBtn = (n: number, label?: string) => {
+    const active = n === current;
+    const s = active
+      ? "background:rgba(170,238,68,0.12);border-color:rgba(170,238,68,0.28);color:#aaee44;cursor:default"
+      : "background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);color:#4e6278;cursor:pointer";
+    const htmx = active ? "" : `hx-get="${pageUrl(n)}" hx-target="#classement-container" hx-swap="innerHTML"`;
+    return `<button ${htmx} style="${s};width:30px;height:30px;border-radius:6px;border-width:1px;font-size:12px;font-weight:600;font-family:'Manrope',sans-serif;display:inline-flex;align-items:center;justify-content:center;transition:background 0.12s,color 0.12s">${label ?? n}</button>`;
+  };
+
+  const navBtn = (n: number, label: string, disabled: boolean) => {
+    const s = disabled
+      ? "background:transparent;border-color:rgba(255,255,255,0.05);color:#243040;cursor:not-allowed"
+      : "background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);color:#4e6278;cursor:pointer";
+    const htmx = disabled ? "" : `hx-get="${pageUrl(n)}" hx-target="#classement-container" hx-swap="innerHTML"`;
+    return `<button ${htmx} ${disabled ? "disabled" : ""} style="${s};padding:0 10px;height:30px;border-radius:6px;border-width:1px;font-size:12px;font-weight:600;font-family:'Manrope',sans-serif;display:inline-flex;align-items:center;justify-content:center;transition:background 0.12s,color 0.12s">${label}</button>`;
+  };
+
+  const MAX_VISIBLE = 5;
+  let pages: (number | "…")[] = [];
+  if (total <= MAX_VISIBLE + 2) {
+    pages = Array.from({ length: total }, (_, i) => i + 1);
+  } else {
+    const half = Math.floor(MAX_VISIBLE / 2);
+    let start = Math.max(2, current - half);
+    let end   = Math.min(total - 1, start + MAX_VISIBLE - 1);
+    if (end - start < MAX_VISIBLE - 1) start = Math.max(2, end - MAX_VISIBLE + 1);
+    pages = [1];
+    if (start > 2) pages.push("…");
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < total - 1) pages.push("…");
+    pages.push(total);
+  }
+
+  const start = (current - 1) * pageSize + 1;
+  const end   = Math.min(current * pageSize, totalRows);
+
+  return `
+    <div style="position:sticky;bottom:0;z-index:10;background:#0b1018;display:flex;align-items:center;justify-content:center;padding:10px 20px;border-top:1px solid rgba(255,255,255,0.05);gap:16px;flex-wrap:wrap">
+      ${navBtn(current - 1, "←", current === 1)}
+      ${pages.map((p) => p === "…"
+        ? `<span style="width:20px;text-align:center;color:#243040;font-size:12px">…</span>`
+        : pageBtn(p as number)
+      ).join("")}
+      ${navBtn(current + 1, "→", current === total)}
+      <span style="font-size:11px;color:#243040;font-family:'Manrope',sans-serif;margin-left:8px">${start}–${end} / ${totalRows}</span>
+    </div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,128 +175,149 @@ export function renderClassement(
   usingMock: boolean,
   contestInfo?: ContestInfo | null,
   departmentFilter?: string,
+  page = 1,
+  perPage = 20,
 ): string {
-  const count      = players.length;
   const isFiltered = Boolean(departmentFilter && departmentFilter !== "");
 
   const banner = usingMock
-    ? `<div class="px-4 py-2.5 text-xs text-amber-400/90 bg-amber-950/40 border-b border-amber-800/40 flex items-center gap-2">
-         <span class="shrink-0">⚠</span>
-         <span>Mode démo — ajoutez <code class="font-mono bg-amber-900/30 px-1 rounded">MPP_ACCESS_TOKEN</code> dans <code class="font-mono bg-amber-900/30 px-1 rounded">.env</code> pour les vraies données.</span>
+    ? `<div style="padding:10px 20px;font-size:12px;color:#fbbf24;background:rgba(120,80,0,0.18);border-bottom:1px solid rgba(251,191,36,0.15);display:flex;align-items:center;gap:8px">
+         <span>⚠</span>
+         <span>Mode démo — ajoutez <code style="font-family:monospace;background:rgba(251,191,36,0.1);padding:0 4px;border-radius:3px">MPP_ACCESS_TOKEN</code> dans <code style="font-family:monospace;background:rgba(251,191,36,0.1);padding:0 4px;border-radius:3px">.env</code> pour les vraies données.</span>
        </div>`
     : "";
 
-  if (count === 0) {
-    return `${banner}<p class="text-slate-500 text-center py-14 text-sm">Aucun joueur pour ce filtre.</p>`;
+  if (players.length === 0) {
+    return `${banner}<p style="text-align:center;padding:56px 0;font-size:14px;color:#243040">Aucun joueur pour ce filtre.</p>`;
   }
 
-  const rows = players.map((p, i) => {
-    const deptRank = i + 1;
+  const totalRows  = players.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+  const current    = Math.min(Math.max(1, page), totalPages);
+  const start      = (current - 1) * perPage;
+  const pagePlayers = players.slice(start, start + perPage);
+
+  const maxPts = players[0]?.points ?? 1;
+
+  const rows = pagePlayers.map((p, i) => {
+    const deptRank = start + i + 1;
+    const ptsPct   = Math.max(6, Math.round((p.points / maxPts) * 82));
+    const fill     = deptRowFill(p.departmentCode);
+    const c        = deptColor(p.departmentCode);
     const isTop3   = isFiltered ? deptRank <= 3 : p.rank <= 3;
-    const rowBg    = isTop3 ? "bg-yellow-500/[0.03] hover:bg-yellow-500/[0.06]" : "hover:bg-slate-800/30";
+    const rowStyle = `--pts-pct:${ptsPct}%;--row-fill:${fill};border-bottom:1px solid rgba(255,255,255,0.04);cursor:default;transition:background 0.1s`;
 
     const rankCell = isFiltered
-      ? `<td class="pl-4 pr-3 py-3 w-[4.5rem]">
-           <div class="text-base leading-none">${rankDisplay(deptRank)}</div>
-           <div class="text-[10px] text-slate-600 mt-1 tabular-nums">#${p.rank} gén.</div>
+      ? `<td style="padding:10px 12px 10px 20px;width:72px;vertical-align:middle">
+           ${rankDisplay(deptRank, true, p.rank)}
          </td>`
-      : `<td class="pl-4 pr-3 py-3 w-12 text-center">
-           <div class="text-base leading-none">${rankDisplay(p.rank)}</div>
+      : `<td style="padding:10px 12px 10px 20px;width:48px;text-align:center;vertical-align:middle">
+           ${rankDisplay(p.rank, false)}
          </td>`;
 
     const deptCell = isFiltered ? "" : `
-      <td class="px-3 py-3 hidden sm:table-cell">
-        <span class="${deptBadge(p.departmentCode)} text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap">${esc(p.departmentName)}</span>
+      <td class="hidden sm:table-cell" style="padding:10px 16px;vertical-align:middle">
+        ${deptBadge(p.departmentCode, p.departmentName)}
       </td>`;
 
+    const mobileDeptBadge = isFiltered ? "" :
+      `<div class="sm:hidden" style="margin-top:3px">${deptBadge(p.departmentCode, p.departmentName)}</div>`;
+
     return `
-      <tr class="border-b border-slate-800/40 transition-colors ${rowBg}">
+      <tr class="player-row" style="${rowStyle}">
         ${rankCell}
-        <td class="px-2 py-3 w-10">${avatarImg(p, "w-9 h-9")}</td>
-        <td class="px-3 py-3 font-medium text-slate-100 max-w-[12rem] truncate" title="${esc(p.pseudo)}">${esc(p.pseudo)}</td>
+        <td style="padding:8px;width:44px;vertical-align:middle">${avatarImg(p, 36)}</td>
+        <td style="padding:10px 12px;vertical-align:middle;max-width:200px">
+          <div style="font-weight:600;font-size:14px;color:#dce9f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.pseudo)}">${esc(p.pseudo)}</div>
+          ${mobileDeptBadge}
+        </td>
         ${deptCell}
-        <td class="px-4 py-3 text-right font-bold tabular-nums text-slate-100">${p.points.toLocaleString("fr-FR")}</td>
-        <td class="px-4 py-3 text-right tabular-nums text-slate-300 hidden sm:table-cell">${fmt(p.goodResults)}</td>
-        <td class="px-4 py-3 text-right tabular-nums text-emerald-400 hidden sm:table-cell">${fmt(p.exactScores)}</td>
-        <td class="px-3 py-3 text-right tabular-nums text-slate-600 text-xs hidden md:table-cell">${fmt(p.playedPredictions)}</td>
-        <td class="pr-3 py-3 text-center w-12">${expandBtn(p.id, false)}</td>
+        <td style="padding:10px 16px;text-align:right;vertical-align:middle">
+          <span class="font-oswald" style="font-size:17px;font-weight:600;color:${isTop3 ? c.text : "#dce9f8"};letter-spacing:0.01em">${p.points.toLocaleString("fr-FR")}</span>
+        </td>
+        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#4e6278;font-variant-numeric:tabular-nums">${fmt(p.goodResults)}</td>
+        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#6ee7b7;font-variant-numeric:tabular-nums">${fmt(p.exactScores)}</td>
+        <td class="hidden md:table-cell" style="padding:10px 12px;text-align:right;vertical-align:middle;font-size:12px;color:#243040;font-variant-numeric:tabular-nums">${fmt(p.playedPredictions)}</td>
+        <td style="padding:10px 12px;width:44px;vertical-align:middle">${expandBtn(p.id, false)}</td>
       </tr>
       <tr id="detail-${esc(p.id)}"></tr>`;
   }).join("");
 
-  const rankHeader = isFiltered
-    ? `<th class="pl-4 pr-3 py-2.5 w-[4.5rem] text-left">Rang</th>`
-    : `<th class="pl-4 pr-3 py-2.5 w-12"></th>`;
-  const deptHeader = isFiltered ? "" : `<th class="px-3 py-2.5 hidden sm:table-cell">Département</th>`;
+  const rankTh = isFiltered
+    ? `<th style="padding-left:20px;text-align:left;width:72px">Rang</th>`
+    : `<th style="padding-left:20px;width:48px"></th>`;
+  const deptTh = isFiltered ? "" : `<th class="hidden sm:table-cell" style="padding:0 16px;text-align:left">Département</th>`;
+
+  const deptParam = departmentFilter ?? "";
 
   return `
     ${banner}
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-800/40">
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead class="table-head" style="position:sticky;top:0;z-index:10;background:#0b1018">
           <tr>
-            ${rankHeader}
-            <th class="px-2 py-2.5 w-10"></th>
-            <th class="px-3 py-2.5 text-left">Joueur</th>
-            ${deptHeader}
-            <th class="px-4 py-2.5 text-right">Points</th>
-            <th class="px-4 py-2.5 text-right hidden sm:table-cell">Pronos</th>
-            <th class="px-4 py-2.5 text-right hidden sm:table-cell">Exacts</th>
-            <th class="px-3 py-2.5 text-right hidden md:table-cell">Joués</th>
-            <th class="pr-3 py-2.5 w-12"></th>
+            ${rankTh}
+            <th style="width:44px"></th>
+            <th style="padding:0 12px;text-align:left">Joueur</th>
+            ${deptTh}
+            <th style="padding:0 16px;text-align:right">Points</th>
+            <th class="hidden sm:table-cell" style="padding:0 14px;text-align:right">Pronos</th>
+            <th class="hidden sm:table-cell" style="padding:0 14px;text-align:right">Exacts</th>
+            <th class="hidden md:table-cell" style="padding:0 12px;text-align:right">Joués</th>
+            <th style="width:44px"></th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    </div>
+    ${paginationBar(current, totalPages, totalRows, perPage, deptParam)}`;
 }
 
 // ---------------------------------------------------------------------------
-// Ligne de détail expandée (réponse HTMX pour /player/:id)
+// Expand row — réponse HTMX /player/:id
 // ---------------------------------------------------------------------------
 export function renderPlayerExpandRow(player: MppPlayer): string {
-  const goodPct  = pct(player.goodResults, player.playedPredictions);
-  const exactPct = pct(player.exactScores, player.playedPredictions);
-  const ptsPerMatch = (player.playedPredictions && player.playedPredictions > 0)
+  const c         = deptColor(player.departmentCode);
+  const goodPct   = pct(player.goodResults, player.playedPredictions);
+  const exactPct  = pct(player.exactScores, player.playedPredictions);
+  const ptsPerM   = (player.playedPredictions && player.playedPredictions > 0)
     ? (player.points / player.playedPredictions).toFixed(1)
     : "—";
 
-  const stat = (label: string, value: string, sub: string, color: string) => `
-    <div class="text-center px-4 py-3 border-r border-slate-800/60 last:border-r-0">
-      <div class="text-lg font-bold tabular-nums ${color}">${value}</div>
-      ${sub ? `<div class="text-[11px] text-slate-500 mt-0.5">${sub}</div>` : ""}
-      <div class="text-[11px] text-slate-600 mt-1 uppercase tracking-wide">${label}</div>
+  const statBlock = (label: string, value: string, sub: string, valueColor: string) => `
+    <div style="flex:1;min-width:80px;text-align:center;padding:14px 10px;border-right:1px solid rgba(255,255,255,0.05)">
+      <div class="font-oswald" style="font-size:1.4rem;font-weight:600;color:${valueColor};line-height:1;letter-spacing:0.01em">${value}</div>
+      ${sub ? `<div style="font-size:10px;color:#4e6278;margin-top:3px;font-variant-numeric:tabular-nums">${sub}</div>` : ""}
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#243040;margin-top:6px;font-weight:700">${label}</div>
     </div>`;
 
   const detailRow = `
-    <tr id="detail-${esc(player.id)}" class="border-b border-slate-800/40 bg-slate-950/70">
-      <td colspan="99" class="py-0">
-        <div class="flex items-stretch">
-          <div class="flex items-center gap-3 px-4 py-3 border-r border-slate-800/60 shrink-0">
-            ${avatarImg(player, "w-10 h-10")}
+    <tr id="detail-${esc(player.id)}" class="detail-expand" style="border-bottom:1px solid rgba(255,255,255,0.04)">
+      <td colspan="99" style="padding:0">
+        <div style="display:flex;align-items:stretch;border-left:3px solid ${c.solid}">
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-right:1px solid rgba(255,255,255,0.05);flex-shrink:0">
+            ${avatarImg(player, 40)}
             <div>
-              <div class="font-semibold text-sm text-slate-100 whitespace-nowrap">${esc(player.pseudo)}</div>
-              <span class="${deptBadge(player.departmentCode)} text-[11px] font-medium px-1.5 py-0.5 rounded-full mt-1 inline-block">${esc(player.departmentName)}</span>
+              <div style="font-weight:600;font-size:14px;color:#dce9f8;white-space:nowrap">${esc(player.pseudo)}</div>
+              <div style="margin-top:4px">${deptBadge(player.departmentCode, player.departmentName)}</div>
             </div>
           </div>
-          <div class="flex flex-1 overflow-x-auto">
-            ${stat("Points",        player.points.toLocaleString("fr-FR"), `${ptsPerMatch} pts/match`, "text-slate-100")}
-            ${stat("Bons pronos",   fmt(player.goodResults),   goodPct,  "text-slate-200")}
-            ${stat("Scores exacts", fmt(player.exactScores),   exactPct, "text-emerald-400")}
-            ${stat("Joués",         fmt(player.playedPredictions), "",   "text-slate-500")}
+          <div style="display:flex;flex:1;overflow-x:auto">
+            ${statBlock("Points",        player.points.toLocaleString("fr-FR"), `${ptsPerM} pts / match`, "#dce9f8")}
+            ${statBlock("Bons pronos",   fmt(player.goodResults),  goodPct,  "#dce9f8")}
+            ${statBlock("Scores exacts", fmt(player.exactScores),  exactPct, c.text)}
+            ${statBlock("Joués",         fmt(player.playedPredictions), "",  "#4e6278")}
           </div>
         </div>
       </td>
     </tr>`;
 
-  // OOB : met à jour le bouton dans la ligne principale
   const oobBtn = `<span hx-swap-oob="outerHTML:#btn-${esc(player.id)}">${expandBtn(player.id, true)}</span>`;
-
   return detailRow + oobBtn;
 }
 
 // ---------------------------------------------------------------------------
-// Ligne de détail fermée (réponse HTMX pour /player/:id/close)
+// Close row — réponse HTMX /player/:id/close
 // ---------------------------------------------------------------------------
 export function renderPlayerCloseRow(player: MppPlayer): string {
   const emptyRow = `<tr id="detail-${esc(player.id)}"></tr>`;
@@ -232,41 +326,46 @@ export function renderPlayerCloseRow(player: MppPlayer): string {
 }
 
 // ---------------------------------------------------------------------------
-// Statistiques par département — cartes compactes cliquables
+// Stats par département
 // ---------------------------------------------------------------------------
 export function renderStats(stats: DepartmentStats[]): string {
   if (stats.length === 0) {
-    return `<p class="text-slate-500 text-center py-4 text-sm">Aucune statistique disponible.</p>`;
+    return `<p style="text-align:center;padding:16px 0;font-size:14px;color:#243040">Aucune statistique disponible.</p>`;
   }
 
   const pillClass: Record<DepartmentCode, string> = {
-    MT: "fp-MT", ES: "fp-ES", TD: "fp-TD", WD: "fp-WD", UNKNOWN: "fp-UNK",
+    MT: "fp-MT", ES: "fp-ES", TD: "fp-TD", WD: "fp-WD", UNKNOWN: "",
   };
 
   const cards = stats
     .filter((s) => s.departmentCode !== "UNKNOWN")
     .map((s) => {
-    const pill  = pillClass[s.departmentCode] ?? "fp-UNK";
-    const color = deptAccent(s.departmentCode);
-    const best  = s.bestPlayer;
-    return `
-      <button
-        type="button"
-        class="filter-pill ${pill} group text-left rounded-lg border ${color} px-3 py-2.5 transition-colors cursor-pointer w-full"
-        data-dept="${s.departmentCode}"
-        onclick="setActivePill('${s.departmentCode}')"
-        hx-get="/classement?department=${s.departmentCode}"
-        hx-target="#classement-container"
-        hx-swap="innerHTML"
-      >
-        <div class="flex items-center justify-between gap-2 mb-1.5">
-          <span class="text-[11px] font-semibold uppercase tracking-wide ${color.split(" ")[0]}">${esc(s.departmentName)}</span>
-          <span class="text-base font-black tabular-nums text-slate-100">${s.playerCount}</span>
-        </div>
-        <div class="text-[11px] text-slate-400">Moy. <span class="text-slate-200 font-semibold">${s.averagePoints.toLocaleString("fr-FR")}</span> · Total <span class="text-slate-300 font-medium">${s.totalPoints.toLocaleString("fr-FR")}</span></div>
-        ${best ? `<div class="text-[11px] text-slate-600 mt-1 truncate" title="${esc(best.pseudo)}">🏆 ${esc(best.pseudo)}</div>` : ""}
-      </button>`;
-  }).join("");
+      const c    = deptColor(s.departmentCode);
+      const pill = pillClass[s.departmentCode] ?? "";
+      const best = s.bestPlayer;
+      return `
+        <button
+          type="button"
+          class="dept-tab stat-card dept-${s.departmentCode} ${pill}"
+          data-dept="${s.departmentCode}"
+          onclick="setActivePill('${s.departmentCode}')"
+          hx-get="/classement?department=${s.departmentCode}"
+          hx-target="#classement-container"
+          hx-swap="innerHTML"
+          style="text-align:left;padding:11px 14px;border-radius:8px;cursor:pointer;width:100%"
+        >
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:${c.text}">${esc(s.departmentName)}</span>
+            <span class="font-oswald" style="font-size:1.25rem;font-weight:700;color:#dce9f8;line-height:1;flex-shrink:0">${s.playerCount}</span>
+          </div>
+          <div style="font-size:11px;color:#4e6278;line-height:1.5">
+            Moy. <span style="color:#dce9f8;font-weight:600">${s.averagePoints.toLocaleString("fr-FR")}</span>
+            <span style="color:#243040;margin:0 4px">·</span>
+            Total <span style="color:#aab8c8;font-weight:500">${s.totalPoints.toLocaleString("fr-FR")}</span>
+          </div>
+          ${best ? `<div style="font-size:10px;color:#243040;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(best.pseudo)}">🏆 ${esc(best.pseudo)}</div>` : ""}
+        </button>`;
+    }).join("");
 
   return `<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">${cards}</div>`;
 }
@@ -276,60 +375,62 @@ export function renderStats(stats: DepartmentStats[]): string {
 // ---------------------------------------------------------------------------
 export function renderError(message: string): string {
   return `
-    <div class="p-10 text-center">
-      <p class="text-red-400 font-semibold text-sm">${esc(message)}</p>
-      <p class="text-slate-600 text-xs mt-1">Réessayez dans quelques instants.</p>
+    <div style="padding:48px 0;text-align:center">
+      <p style="color:#f87171;font-weight:600;font-size:14px">${esc(message)}</p>
+      <p style="color:#243040;font-size:12px;margin-top:4px">Réessayez dans quelques instants.</p>
     </div>`;
 }
 
 // ---------------------------------------------------------------------------
-// Debug : réponse brute de GET /user
+// Debug — GET /user
 // ---------------------------------------------------------------------------
 export function renderDebugUser(user: MppRawUser | null, error: string | null): string {
   const content = error
-    ? `<p class="text-red-400">${esc(error)}</p>`
-    : `<pre class="text-xs text-green-300 overflow-x-auto whitespace-pre-wrap break-all">${esc(JSON.stringify(user, null, 2))}</pre>`;
-
+    ? `<p style="color:#f87171">${esc(error)}</p>`
+    : `<pre style="font-size:12px;color:#6ee7b7;overflow-x:auto;white-space:pre-wrap;word-break:break-all">${esc(JSON.stringify(user, null, 2))}</pre>`;
   return `
-    <div class="max-w-4xl mx-auto px-4 py-8 font-mono">
-      <div class="flex items-center gap-3 mb-4">
-        <a href="/" class="text-slate-400 hover:text-white text-sm">← Classement</a>
-        <h1 class="text-xl font-bold">Debug — GET /user</h1>
-        ${!error ? `<a href="/debug/probe" class="ml-auto text-xs bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded">→ Sonder les endpoints</a>` : ""}
+    <div style="max-width:900px;margin:0 auto;padding:32px 20px;font-family:'Manrope',sans-serif">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <a href="/" style="color:#4e6278;font-size:14px;text-decoration:none">← Classement</a>
+        <h1 style="font-size:20px;font-weight:700;color:#dce9f8">Debug — GET /user</h1>
+        ${!error ? `<a href="/debug/probe" style="margin-left:auto;font-size:12px;background:#1d4ed8;color:#fff;padding:4px 12px;border-radius:6px;text-decoration:none">→ Sonder les endpoints</a>` : ""}
       </div>
-      <div class="rounded-lg border border-slate-700 bg-slate-950 p-4">${content}</div>
+      <div style="border-radius:10px;border:1px solid rgba(255,255,255,0.07);background:#0b1018;padding:16px">${content}</div>
     </div>`;
 }
 
 // ---------------------------------------------------------------------------
-// Debug : résultats du probe d'endpoints
+// Debug — probe endpoints
 // ---------------------------------------------------------------------------
 export function renderDebugProbe(leagueId: string, results: ProbeResult[]): string {
   const best = results.find((r) => r.status === "ok");
   const rows = results.map((r) => {
-    const color = r.status === "ok" ? "text-green-400" : r.status === "empty" ? "text-yellow-400" : "text-red-400";
+    const color = r.status === "ok" ? "#6ee7b7" : r.status === "empty" ? "#fbbf24" : "#f87171";
     const icon  = r.status === "ok" ? "✅" : r.status === "empty" ? "⚠" : "✗";
     return `
-      <tr class="border-b border-slate-700/60">
-        <td class="px-4 py-2 font-mono text-xs text-slate-300">${esc(r.path)}</td>
-        <td class="px-4 py-2 ${color} text-xs">${icon} ${esc(r.hint ?? r.status)}</td>
-        ${r.playerCount !== undefined ? `<td class="px-4 py-2 text-xs text-blue-400">${r.playerCount} joueurs</td>` : `<td></td>`}
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05)">
+        <td style="padding:8px 16px;font-family:monospace;font-size:12px;color:#dce9f8">${esc(r.path)}</td>
+        <td style="padding:8px 16px;font-size:12px;color:${color}">${icon} ${esc(r.hint ?? r.status)}</td>
+        ${r.playerCount !== undefined ? `<td style="padding:8px 16px;font-size:12px;color:#93c5fd">${r.playerCount} joueurs</td>` : `<td></td>`}
       </tr>`;
   }).join("");
-
   return `
-    <div class="max-w-4xl mx-auto px-4 py-8 font-mono">
-      <div class="flex items-center gap-3 mb-4">
-        <a href="/debug/user" class="text-slate-400 hover:text-white text-sm">← /user</a>
-        <h1 class="text-xl font-bold">Debug — Probe (${esc(leagueId)})</h1>
+    <div style="max-width:900px;margin:0 auto;padding:32px 20px;font-family:'Manrope',sans-serif">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <a href="/debug/user" style="color:#4e6278;font-size:14px;text-decoration:none">← /user</a>
+        <h1 style="font-size:20px;font-weight:700;color:#dce9f8">Debug — Probe (${esc(leagueId)})</h1>
       </div>
       ${best
-        ? `<div class="mb-4 p-3 rounded bg-green-950 border border-green-800 text-sm text-green-300">✅ Endpoint valide : <code>${esc(best.path)}</code></div>`
-        : `<div class="mb-4 p-3 rounded bg-red-950 border border-red-800 text-sm text-red-300">Aucun endpoint valide trouvé.</div>`}
-      <div class="rounded-lg border border-slate-700 bg-slate-950 overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-800 text-xs uppercase text-slate-400">
-            <tr><th class="px-4 py-2 text-left">Endpoint</th><th class="px-4 py-2 text-left">Résultat</th><th class="px-4 py-2 text-left">Joueurs</th></tr>
+        ? `<div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);font-size:14px;color:#6ee7b7">✅ Endpoint valide : <code style="font-family:monospace">${esc(best.path)}</code></div>`
+        : `<div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);font-size:14px;color:#f87171">Aucun endpoint valide trouvé.</div>`}
+      <div style="border-radius:10px;border:1px solid rgba(255,255,255,0.07);background:#0b1018;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:rgba(255,255,255,0.04)">
+              <th style="padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#243040;font-weight:700">Endpoint</th>
+              <th style="padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#243040;font-weight:700">Résultat</th>
+              <th style="padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#243040;font-weight:700">Joueurs</th>
+            </tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
