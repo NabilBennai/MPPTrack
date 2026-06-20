@@ -11,24 +11,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // ---------------------------------------------------------------------------
-// Routes existantes
+// Routes MPP (à la racine)
 // ---------------------------------------------------------------------------
-app.get("/", (_, res) => {
-    res.sendFile(path.resolve("src/views/index.html"));
-});
-
-app.get("/api/message", (_, res) => {
-    res.send(`
-    <div class="rounded-lg border border-slate-700 bg-slate-900 p-4">
-      HTMX fonctionne avec Express
-    </div>
-  `);
-});
-
-// ---------------------------------------------------------------------------
-// Routes MPP
-// ---------------------------------------------------------------------------
-app.use("/mpp", mppRouter);
+app.use("/", mppRouter);
 
 // ---------------------------------------------------------------------------
 // Gestion d'erreurs globale

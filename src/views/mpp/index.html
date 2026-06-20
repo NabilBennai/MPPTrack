@@ -3,92 +3,126 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Classement MPP — MPP Track</title>
+  <title>MPP Track</title>
   <link rel="stylesheet" href="/css/output.css" />
   <script src="/js/htmx.min.js" defer></script>
+  <style>
+    .filter-pill { transition: background .15s, color .15s, border-color .15s; }
+    .fp-all[data-active]  { background: #e2e8f0; color: #0f172a; border-color: #e2e8f0; }
+    .fp-MT[data-active]   { background: #1d4ed8; color: #fff;    border-color: #1d4ed8; }
+    .fp-ES[data-active]   { background: #7c3aed; color: #fff;    border-color: #7c3aed; }
+    .fp-TD[data-active]   { background: #059669; color: #fff;    border-color: #059669; }
+    .fp-WD[data-active]   { background: #ea580c; color: #fff;    border-color: #ea580c; }
+    .fp-UNK[data-active]  { background: #475569; color: #fff;    border-color: #475569; }
+  </style>
 </head>
-<body class="bg-slate-950 text-white min-h-screen">
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased">
 
-  <div class="max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
-
-    <!-- En-tête -->
-    <header class="flex items-center gap-4">
-      <a href="/"
-         class="text-slate-500 hover:text-slate-200 text-sm transition-colors">
-        ← Accueil
-      </a>
-      <h1 class="text-3xl font-extrabold tracking-tight">Classement MPP</h1>
-    </header>
-
-    <!-- Statistiques par département -->
-    <section class="flex flex-col gap-3">
-      <h2 class="text-base font-semibold text-slate-400 uppercase tracking-widest text-xs">
-        Statistiques par département
-      </h2>
-      <div
-        id="stats-container"
-        hx-get="/mpp/stats"
-        hx-trigger="load"
-        hx-swap="innerHTML"
-        class="min-h-24"
-      >
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
-          <div class="h-28 rounded-lg bg-slate-800"></div>
-          <div class="h-28 rounded-lg bg-slate-800"></div>
-          <div class="h-28 rounded-lg bg-slate-800"></div>
-          <div class="h-28 rounded-lg bg-slate-800"></div>
-        </div>
+  <!-- Header -->
+  <header class="sticky top-0 z-20 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800/60">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
+      <span class="text-xl leading-none select-none">⚽</span>
+      <span class="font-bold text-lg tracking-tight">MPP Track</span>
+      <div class="ml-auto flex items-center gap-2">
+        <span id="cache-status" class="text-xs text-slate-500"></span>
+        <button
+          class="text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors"
+          hx-post="/cache/clear"
+          hx-target="#cache-status"
+          hx-swap="innerHTML"
+          title="Forcer le rechargement des données"
+        >↺ Actualiser</button>
       </div>
-    </section>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-7 flex flex-col gap-7">
+
+    <!-- Stats par département -->
+    <div
+      id="stats-container"
+      hx-get="/stats"
+      hx-trigger="load"
+      hx-swap="innerHTML"
+      class="grid grid-cols-2 sm:grid-cols-4 gap-3"
+    >
+      <div class="h-24 rounded-xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
+      <div class="h-24 rounded-xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
+      <div class="h-24 rounded-xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
+      <div class="h-24 rounded-xl bg-slate-900/60 border border-slate-800 animate-pulse"></div>
+    </div>
 
     <!-- Classement -->
-    <section class="flex flex-col gap-3">
-      <div class="flex items-center justify-between gap-4 flex-wrap">
-        <h2 class="text-base font-semibold text-slate-400 uppercase tracking-widest text-xs">
-          Classement général
-        </h2>
-        <div class="flex items-center gap-2">
-          <label for="dept-filter" class="text-sm text-slate-400">Département :</label>
-          <select
-            id="dept-filter"
-            name="department"
-            hx-get="/mpp/classement"
-            hx-target="#classement-container"
-            hx-trigger="change"
-            hx-swap="innerHTML"
-            class="bg-slate-800 border border-slate-600 text-white text-sm rounded-lg px-3 py-1.5
-                   focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-          >
-            <option value="">Tous</option>
-            <option value="MT">MyTower</option>
-            <option value="ES">e-SCM</option>
-            <option value="TD">TDi</option>
-            <option value="WD">Winddle</option>
-            <option value="UNKNOWN">Inconnu</option>
-          </select>
-        </div>
+    <div class="flex flex-col gap-3">
+
+      <!-- Filtres par département -->
+      <div id="dept-filters" class="flex flex-wrap gap-2">
+        <button class="filter-pill fp-all px-4 py-1.5 rounded-full text-sm font-medium border border-slate-500 text-slate-200"
+          data-dept="" data-active
+          hx-get="/classement" hx-target="#classement-container" hx-swap="innerHTML">
+          Tous
+        </button>
+        <button class="filter-pill fp-MT px-4 py-1.5 rounded-full text-sm font-medium border border-blue-800 text-blue-300"
+          data-dept="MT"
+          hx-get="/classement?department=MT" hx-target="#classement-container" hx-swap="innerHTML">
+          MyTower
+        </button>
+        <button class="filter-pill fp-ES px-4 py-1.5 rounded-full text-sm font-medium border border-purple-800 text-purple-300"
+          data-dept="ES"
+          hx-get="/classement?department=ES" hx-target="#classement-container" hx-swap="innerHTML">
+          e-SCM
+        </button>
+        <button class="filter-pill fp-TD px-4 py-1.5 rounded-full text-sm font-medium border border-emerald-800 text-emerald-300"
+          data-dept="TD"
+          hx-get="/classement?department=TD" hx-target="#classement-container" hx-swap="innerHTML">
+          TDi
+        </button>
+        <button class="filter-pill fp-WD px-4 py-1.5 rounded-full text-sm font-medium border border-orange-800 text-orange-300"
+          data-dept="WD"
+          hx-get="/classement?department=WD" hx-target="#classement-container" hx-swap="innerHTML">
+          Winddle
+        </button>
+        <button class="filter-pill fp-UNK px-4 py-1.5 rounded-full text-sm font-medium border border-slate-600 text-slate-400"
+          data-dept="UNKNOWN"
+          hx-get="/classement?department=UNKNOWN" hx-target="#classement-container" hx-swap="innerHTML">
+          Autres
+        </button>
       </div>
 
-      <div class="rounded-xl border border-slate-700 bg-slate-900 overflow-hidden">
+      <!-- Tableau -->
+      <div class="rounded-xl border border-slate-800 overflow-hidden bg-slate-900/30">
         <div
           id="classement-container"
-          hx-get="/mpp/classement"
+          hx-get="/classement"
           hx-trigger="load"
           hx-swap="innerHTML"
         >
-          <div class="p-10 text-center text-slate-500 text-sm animate-pulse">
-            Chargement du classement…
+          <div class="py-16 flex flex-col items-center gap-3 text-slate-600">
+            <div class="w-6 h-6 border-2 border-slate-700 border-t-slate-400 rounded-full animate-spin"></div>
+            <span class="text-sm">Chargement…</span>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- Détail joueur (panneau affiché dynamiquement) -->
-    <section>
-      <div id="player-detail" class="empty:hidden"></div>
-    </section>
+    <!-- Panneau détail joueur -->
+    <div id="player-detail" class="empty:hidden"></div>
 
-  </div>
+  </main>
+
+  <script>
+    function setActivePill(dept) {
+      document.querySelectorAll('.filter-pill').forEach(p => {
+        if (p.dataset.dept === String(dept)) p.setAttribute('data-active', '');
+        else p.removeAttribute('data-active');
+      });
+    }
+
+    document.getElementById('dept-filters').addEventListener('click', e => {
+      const btn = e.target.closest('.filter-pill');
+      if (btn) setActivePill(btn.dataset.dept);
+    });
+  </script>
 
 </body>
 </html>
