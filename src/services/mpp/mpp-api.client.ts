@@ -53,8 +53,9 @@ export async function requestMpp<T>(path: string): Promise<T> {
     return response.json() as Promise<T>;
   } catch (err) {
     if (err instanceof MppApiError) throw err;
-    console.error(`[MPP] GET ${path} → réseau KO`);
-    throw new MppApiError("Erreur réseau", 0, path, String(err));
+    const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    console.error(`[MPP] GET ${path} → réseau KO — ${detail}`);
+    throw new MppApiError("Erreur réseau", 0, path, detail);
   }
 }
 

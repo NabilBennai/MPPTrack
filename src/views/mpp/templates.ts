@@ -4,7 +4,7 @@ import type {
   MppPlayer,
   MppRawUser,
 } from "../../types/mpp.types.js";
-import type { ProbeResult } from "../../services/mpp/mpp.service.js";
+import type { ProbeResult, ContestInfo } from "../../services/mpp/mpp.service.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,15 +37,21 @@ export function renderClassement(
   players: MppPlayer[],
   updatedAt: string,
   usingMock: boolean,
+  contestInfo?: ContestInfo | null,
 ): string {
   const count = players.length;
 
   const mockBanner = usingMock
     ? `<div class="px-4 py-2 text-xs text-amber-400 bg-amber-950/50 border-b border-amber-800/50 flex items-center gap-2">
          <span>⚠</span>
-         <span>Mode démo — configurez <code class="font-mono">MPP_ACCESS_TOKEN</code> dans <code class="font-mono">.env</code> pour les données réelles.</span>
+         <span>Mode démo — configurez <code class="font-mono">MPP_ACCESS_TOKEN</code> et <code class="font-mono">MPP_USE_MOCK=false</code> dans <code class="font-mono">.env</code>.</span>
        </div>`
-    : "";
+    : contestInfo
+      ? `<div class="px-4 py-2 text-xs text-slate-400 bg-slate-800/40 border-b border-slate-700/60 flex items-center justify-between">
+           <span class="font-medium text-slate-200">${esc(contestInfo.title)}</span>
+           <span>${contestInfo.totalUsers} participants · Votre rang : <strong class="text-yellow-400">#${contestInfo.userRanking}</strong> · ${contestInfo.userTotalPoints} pts</span>
+         </div>`
+      : "";
 
   if (count === 0) {
     return `

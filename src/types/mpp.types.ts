@@ -2,21 +2,62 @@ export type DepartmentCode = "MT" | "ES" | "TD" | "UNKNOWN";
 export type DepartmentName = "MyTower" | "e-SCM" | "TDi" | "Inconnu";
 
 // ---------------------------------------------------------------------------
-// Formats bruts de l'API MPP (champs exacts inconnus sans token)
+// Réponse brute GET /user-contests
 // ---------------------------------------------------------------------------
-export interface MppRawPlayer {
-  id?: string;
-  username?: string;
-  pseudo?: string;
-  rank?: number;
-  points?: number;
-  exactScores?: number;
-  goodResults?: number;
-  playedPredictions?: number;
+export interface MppContestCard {
+  contestId: string;
+  shortContestId?: string;
+  title: string;
+  championshipId: number;
+  season: number;
+  adminId?: string;
+  imageUrl?: string;
+  userRanking: number;
+  userTotalPoints: number;
+  totalUsers: number;
+  isLive?: boolean;
+  firstGameWeekNumber?: number;
+  lastGameWeekNumber?: number;
+  actualGameWeekNumber?: number;
+  totalGameWeekNumber?: number;
+  isPinned?: boolean;
+  isSupervised?: boolean;
   [key: string]: unknown;
 }
 
-// Réponse brute de GET /user — shape inconnue, conservée flexible pour le debug
+export interface MppUserContestsResponse {
+  contestsCards: MppContestCard[];
+  pinnedChallengesCards: MppContestCard[];
+  pendingContestsInvitationsCards: unknown[];
+  hasNewContestMessages: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Réponse brute GET /challenge-standings/top-users-standings
+// (shape exacte inconnue — on supporte les variantes courantes)
+// ---------------------------------------------------------------------------
+export interface MppRawStandingEntry {
+  userId?: string;
+  id?: string;
+  username?: string;
+  pseudo?: string;
+  firstName?: string;
+  rank?: number;
+  ranking?: number;
+  points?: number;
+  totalPoints?: number;
+  exactScores?: number;
+  exactResults?: number;
+  goodResults?: number;
+  correctResults?: number;
+  playedPredictions?: number;
+  totalForecasts?: number;
+  avatarUrl?: string;
+  level?: number;
+  [key: string]: unknown;
+}
+
+// Réponse brute de /user — kept flexible for debug display
 export type MppRawUser = Record<string, unknown>;
 
 // ---------------------------------------------------------------------------
@@ -32,6 +73,7 @@ export interface MppPlayer {
   exactScores?: number;
   goodResults?: number;
   playedPredictions?: number;
+  avatarUrl?: string;
 }
 
 export interface DepartmentStats {

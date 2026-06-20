@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:css\"",
-    "dev:server": "tsx watch src/server.ts",
+    "dev:server": "tsx watch --env-file=.env src/server.ts",
     "dev:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
     "build": "tsc",
     "start": "node dist/server.js"

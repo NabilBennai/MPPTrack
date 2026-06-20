@@ -1,186 +1,180 @@
 import type {
   MppPlayer,
-  MppRawPlayer,
+  MppRawStandingEntry,
   MppRawUser,
+  MppUserContestsResponse,
+  MppContestCard,
   DepartmentStats,
   DepartmentCode,
 } from "../../types/mpp.types.js";
 import { getDepartmentFromPseudo } from "../../utils/departments.js";
-import { requestMpp, probeMpp, hasToken, MppApiError } from "./mpp-api.client.js";
+import { requestMpp, hasToken } from "./mpp-api.client.js";
 
 // ---------------------------------------------------------------------------
-// Cache mémoire simple (TTL configurable via MPP_CACHE_TTL, défaut 5 min)
+// Cache mémoire (TTL via MPP_CACHE_TTL en secondes, défaut 5 min)
 // ---------------------------------------------------------------------------
-interface CacheEntry<T> {
-  data: T;
-  expiresAt: number;
-}
-
+interface CacheEntry<T> { data: T; expiresAt: number }
 const cache = new Map<string, CacheEntry<unknown>>();
 
 function cacheGet<T>(key: string): T | undefined {
-  const entry = cache.get(key);
-  if (!entry) return undefined;
-  if (Date.now() > entry.expiresAt) { cache.delete(key); return undefined; }
-  return entry.data as T;
+  const e = cache.get(key);
+  if (!e) return undefined;
+  if (Date.now() > e.expiresAt) { cache.delete(key); return undefined; }
+  return e.data as T;
 }
-
 function cacheSet<T>(key: string, data: T): void {
-  const ttlSec = parseInt(process.env["MPP_CACHE_TTL"] ?? "300", 10);
-  cache.set(key, { data, expiresAt: Date.now() + ttlSec * 1000 });
+  const ttl = parseInt(process.env["MPP_CACHE_TTL"] ?? "300", 10) * 1000;
+  cache.set(key, { data, expiresAt: Date.now() + ttl });
 }
-
-export function invalidateCache(): void {
-  cache.clear();
-}
+export function invalidateCache(): void { cache.clear(); }
 
 // ---------------------------------------------------------------------------
-// Mock — utilisé quand MPP_ACCESS_TOKEN est absent ou MPP_USE_MOCK=true
+// Mock — actif quand MPP_ACCESS_TOKEN absent OU MPP_USE_MOCK=true
 // ---------------------------------------------------------------------------
-const MOCK_PLAYERS: MppRawPlayer[] = [
-  { id: "1",  pseudo: "MT_Nabil",    rank: 1,  points: 1250, exactScores: 12, goodResults: 35, playedPredictions: 50 },
-  { id: "2",  pseudo: "MT_Alice",    rank: 2,  points: 1100, exactScores: 10, goodResults: 30, playedPredictions: 48 },
-  { id: "3",  pseudo: "MT_Karim",    rank: 4,  points: 920,  exactScores: 9,  goodResults: 27, playedPredictions: 46 },
-  { id: "4",  pseudo: "ES-Julie",    rank: 3,  points: 980,  exactScores: 8,  goodResults: 28, playedPredictions: 45 },
-  { id: "5",  pseudo: "ES-Marc",     rank: 6,  points: 870,  exactScores: 7,  goodResults: 25, playedPredictions: 42 },
-  { id: "6",  pseudo: "ES-Camille",  rank: 8,  points: 710,  exactScores: 5,  goodResults: 20, playedPredictions: 39 },
-  { id: "7",  pseudo: "TD Mehdi",    rank: 5,  points: 890,  exactScores: 6,  goodResults: 22, playedPredictions: 40 },
-  { id: "8",  pseudo: "TD_Sara",     rank: 7,  points: 760,  exactScores: 5,  goodResults: 18, playedPredictions: 38 },
-  { id: "9",  pseudo: "TD Léa",      rank: 9,  points: 640,  exactScores: 4,  goodResults: 16, playedPredictions: 35 },
-  { id: "10", pseudo: "RandomPlayer", rank: 10, points: 500, exactScores: 3,  goodResults: 15, playedPredictions: 30 },
+const MOCK_PLAYERS: MppPlayer[] = [
+  { id: "1",  pseudo: "MT_Nabil",    rank: 1,  points: 1250, departmentCode: "MT", departmentName: "MyTower",  exactScores: 12, goodResults: 35, playedPredictions: 50 },
+  { id: "2",  pseudo: "MT_Alice",    rank: 2,  points: 1100, departmentCode: "MT", departmentName: "MyTower",  exactScores: 10, goodResults: 30, playedPredictions: 48 },
+  { id: "3",  pseudo: "MT_Karim",    rank: 4,  points: 920,  departmentCode: "MT", departmentName: "MyTower",  exactScores: 9,  goodResults: 27, playedPredictions: 46 },
+  { id: "4",  pseudo: "ES-Julie",    rank: 3,  points: 980,  departmentCode: "ES", departmentName: "e-SCM",    exactScores: 8,  goodResults: 28, playedPredictions: 45 },
+  { id: "5",  pseudo: "ES-Marc",     rank: 6,  points: 870,  departmentCode: "ES", departmentName: "e-SCM",    exactScores: 7,  goodResults: 25, playedPredictions: 42 },
+  { id: "6",  pseudo: "ES-Camille",  rank: 8,  points: 710,  departmentCode: "ES", departmentName: "e-SCM",    exactScores: 5,  goodResults: 20, playedPredictions: 39 },
+  { id: "7",  pseudo: "TD Mehdi",    rank: 5,  points: 890,  departmentCode: "TD", departmentName: "TDi",      exactScores: 6,  goodResults: 22, playedPredictions: 40 },
+  { id: "8",  pseudo: "TD_Sara",     rank: 7,  points: 760,  departmentCode: "TD", departmentName: "TDi",      exactScores: 5,  goodResults: 18, playedPredictions: 38 },
+  { id: "9",  pseudo: "TD Léa",      rank: 9,  points: 640,  departmentCode: "TD", departmentName: "TDi",      exactScores: 4,  goodResults: 16, playedPredictions: 35 },
+  { id: "10", pseudo: "RandomPlayer", rank: 10, points: 500, departmentCode: "UNKNOWN", departmentName: "Inconnu", exactScores: 3, goodResults: 15, playedPredictions: 30 },
 ];
 
-function useMock(): boolean {
+export function useMock(): boolean {
   return !hasToken() || process.env["MPP_USE_MOCK"] === "true";
 }
 
 // ---------------------------------------------------------------------------
-// Récupération de l'utilisateur connecté
+// GET /user — profil utilisateur connecté (pour debug)
 // ---------------------------------------------------------------------------
 export async function getMppUser(): Promise<MppRawUser> {
   const cached = cacheGet<MppRawUser>("user");
   if (cached) return cached;
-
   const user = await requestMpp<MppRawUser>("/user");
   cacheSet("user", user);
   return user;
 }
 
 // ---------------------------------------------------------------------------
-// Extraction des joueurs bruts depuis la réponse API
-// MPP peut envelopper le tableau dans différentes clés — on cherche en profondeur.
+// GET /user-contests — liste des ligues/défis de l'utilisateur
 // ---------------------------------------------------------------------------
-function extractPlayersArray(raw: unknown): MppRawPlayer[] {
-  if (Array.isArray(raw)) return raw as MppRawPlayer[];
+async function getUserContests(): Promise<MppUserContestsResponse> {
+  const cached = cacheGet<MppUserContestsResponse>("contests");
+  if (cached) return cached;
+  const data = await requestMpp<MppUserContestsResponse>("/user-contests");
+  cacheSet("contests", data);
+  return data;
+}
 
-  if (raw && typeof raw === "object") {
-    const obj = raw as Record<string, unknown>;
-    // Cherche la première valeur qui est un tableau non vide
-    for (const key of ["ranking", "rankings", "leaderboard", "players", "members", "users", "data", "results"]) {
-      if (Array.isArray(obj[key]) && (obj[key] as unknown[]).length > 0) {
-        return obj[key] as MppRawPlayer[];
-      }
-    }
-    // Fallback : premier tableau trouvé dans les valeurs
-    for (const value of Object.values(obj)) {
-      if (Array.isArray(value) && value.length > 0) {
-        return value as MppRawPlayer[];
-      }
-    }
+// Résolution du challengeId cible :
+// 1. MPP_CHALLENGE_ID (hardcodé dans .env) → priorité absolue
+// 2. MPP_LEAGUE_TITLE → cherche par titre (insensible à la casse)
+// 3. Premier contest non-pinned dans contestsCards
+async function resolveContestId(): Promise<string | undefined> {
+  const hardcoded = process.env["MPP_CHALLENGE_ID"];
+  if (hardcoded) return hardcoded;
+
+  const data = await getUserContests();
+  const all: MppContestCard[] = [
+    ...(data.contestsCards ?? []),
+    ...(data.pinnedChallengesCards ?? []),
+  ];
+
+  const titleFilter = process.env["MPP_LEAGUE_TITLE"]?.toLowerCase();
+  if (titleFilter) {
+    const match = all.find((c) => c.title.toLowerCase().includes(titleFilter));
+    if (match) return match.contestId;
   }
 
+  // Priorité aux contests personnels (non-supervisés, non-pinnés)
+  const personal = (data.contestsCards ?? []).find((c) => !c.isSupervised);
+  if (personal) return personal.contestId;
+
+  return all[0]?.contestId;
+}
+
+// ---------------------------------------------------------------------------
+// GET /challenge-standings/top-users-standings?challengeId={id}&limit=200
+// ---------------------------------------------------------------------------
+function extractStandings(raw: unknown): MppRawStandingEntry[] {
+  if (Array.isArray(raw)) return raw as MppRawStandingEntry[];
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    for (const key of ["usersStandings", "standings", "ranking", "rankings", "users", "data", "results"]) {
+      if (Array.isArray(obj[key])) return obj[key] as MppRawStandingEntry[];
+    }
+    // Premier tableau trouvé
+    for (const val of Object.values(obj)) {
+      if (Array.isArray(val) && val.length > 0) return val as MppRawStandingEntry[];
+    }
+  }
   return [];
 }
 
-// ---------------------------------------------------------------------------
-// Appel réseau : récupère le classement brut depuis l'API MPP
-// L'endpoint exact est construit depuis les variables d'environnement.
-// ---------------------------------------------------------------------------
-async function fetchMppRawClassement(): Promise<MppRawPlayer[]> {
-  if (useMock()) return MOCK_PLAYERS;
-
-  // Endpoint configuré manuellement (après découverte via /mpp/debug)
-  const rankingPath = process.env["MPP_RANKING_PATH"];
-  if (rankingPath) {
-    const data = await requestMpp<unknown>(rankingPath);
-    return extractPlayersArray(data);
-  }
-
-  // Découverte automatique depuis /user + patterns connus
-  const user = await getMppUser();
-  const leagueId = process.env["MPP_LEAGUE_ID"] ?? extractLeagueId(user);
-
-  if (!leagueId) {
-    console.warn("[MPP] Aucun league ID trouvé. Visitez /mpp/debug/user puis configurez MPP_LEAGUE_ID dans .env");
-    return MOCK_PLAYERS;
-  }
-
-  const candidates = [
-    `/private-leagues/${leagueId}/ranking`,
-    `/private-leagues/${leagueId}/rankings`,
-    `/groups/${leagueId}/ranking`,
-    `/groups/${leagueId}/rankings`,
-    `/user-groups/${leagueId}/ranking`,
-    `/competitions/current/private-leagues/${leagueId}/ranking`,
-  ];
-
-  for (const path of candidates) {
-    const data = await probeMpp<unknown>(path);
-    if (data !== null) {
-      const players = extractPlayersArray(data);
-      if (players.length > 0) {
-        console.log(`[MPP] Endpoint classement trouvé : ${path}`);
-        return players;
-      }
-    }
-  }
-
-  console.warn("[MPP] Aucun endpoint de classement valide. Visitez /mpp/debug/probe pour diagnostiquer.");
-  return MOCK_PLAYERS;
-}
-
-// Tente d'extraire un league/group ID depuis le profil utilisateur
-function extractLeagueId(user: MppRawUser): string | undefined {
-  for (const key of ["privateLeagues", "groups", "leagues", "userGroups"]) {
-    const list = user[key];
-    if (Array.isArray(list) && list.length > 0) {
-      const first = list[0] as Record<string, unknown>;
-      const id = first["id"] ?? first["_id"] ?? first["leagueId"] ?? first["groupId"];
-      if (typeof id === "string" || typeof id === "number") return String(id);
-    }
-  }
-  return undefined;
+async function fetchRawStandings(contestId: string): Promise<MppRawStandingEntry[]> {
+  const limit = parseInt(process.env["MPP_STANDINGS_LIMIT"] ?? "200", 10);
+  const raw = await requestMpp<unknown>(
+    `/challenge-standings/top-users-standings?challengeId=${encodeURIComponent(contestId)}&limit=${limit}`
+  );
+  return extractStandings(raw);
 }
 
 // ---------------------------------------------------------------------------
 // Normalisation brut → modèle interne
 // ---------------------------------------------------------------------------
-function normalizePlayer(raw: MppRawPlayer, index: number): MppPlayer {
-  const pseudo = String(raw.pseudo ?? raw.username ?? `Joueur${index + 1}`);
+function normalizeEntry(entry: MppRawStandingEntry, index: number): MppPlayer {
+  const pseudo = String(
+    entry.username ?? entry.pseudo ?? entry.firstName ?? `Joueur${index + 1}`
+  );
   const { code, name } = getDepartmentFromPseudo(pseudo);
+
   return {
-    id:                String(raw.id ?? index + 1),
+    id:     String(entry.userId ?? entry.id ?? index + 1),
     pseudo,
-    rank:              Number(raw.rank ?? index + 1),
-    points:            Number(raw.points ?? 0),
-    departmentCode:    code,
-    departmentName:    name,
-    exactScores:       raw.exactScores !== undefined ? Number(raw.exactScores) : undefined,
-    goodResults:       raw.goodResults !== undefined ? Number(raw.goodResults) : undefined,
-    playedPredictions: raw.playedPredictions !== undefined ? Number(raw.playedPredictions) : undefined,
+    rank:   Number(entry.rank ?? entry.ranking ?? index + 1),
+    points: Number(entry.points ?? entry.totalPoints ?? 0),
+    departmentCode: code,
+    departmentName: name,
+    exactScores:       toOptionalNumber(entry.exactScores ?? entry.exactResults),
+    goodResults:       toOptionalNumber(entry.goodResults ?? entry.correctResults),
+    playedPredictions: toOptionalNumber(entry.playedPredictions ?? entry.totalForecasts),
+    avatarUrl: typeof entry.avatarUrl === "string" ? entry.avatarUrl : undefined,
   };
+}
+
+function toOptionalNumber(val: unknown): number | undefined {
+  if (val === undefined || val === null) return undefined;
+  const n = Number(val);
+  return isNaN(n) ? undefined : n;
 }
 
 // ---------------------------------------------------------------------------
 // API publique du service
 // ---------------------------------------------------------------------------
 export async function getMppClassement(): Promise<MppPlayer[]> {
+  if (useMock()) return MOCK_PLAYERS;
+
   const cached = cacheGet<MppPlayer[]>("classement");
   if (cached) return cached;
 
-  const raw = await fetchMppRawClassement();
-  const players = raw
-    .map((p, i) => normalizePlayer(p, i))
+  const contestId = await resolveContestId();
+  if (!contestId) {
+    console.warn("[MPP] Aucun contest ID résolvable. Fallback mock.");
+    return MOCK_PLAYERS;
+  }
+
+  const entries = await fetchRawStandings(contestId);
+  if (entries.length === 0) {
+    console.warn(`[MPP] Classement vide pour ${contestId}. Fallback mock.`);
+    return MOCK_PLAYERS;
+  }
+
+  const players = entries
+    .map((e, i) => normalizeEntry(e, i))
     .sort((a, b) => a.rank - b.rank || b.points - a.points);
 
   cacheSet("classement", players);
@@ -189,38 +183,66 @@ export async function getMppClassement(): Promise<MppPlayer[]> {
 
 export function filterByDepartment(players: MppPlayer[], departmentCode?: string): MppPlayer[] {
   if (!departmentCode) return players;
-  const code = departmentCode.toUpperCase();
-  return players.filter((p) => p.departmentCode === code);
+  return players.filter((p) => p.departmentCode === departmentCode.toUpperCase());
 }
 
 export function computeDepartmentStats(players: MppPlayer[]): DepartmentStats[] {
   const groups = new Map<DepartmentCode, MppPlayer[]>();
-
-  for (const player of players) {
-    const existing = groups.get(player.departmentCode);
-    if (existing) { existing.push(player); }
-    else { groups.set(player.departmentCode, [player]); }
+  for (const p of players) {
+    const g = groups.get(p.departmentCode) ?? [];
+    g.push(p);
+    groups.set(p.departmentCode, g);
   }
-
   return Array.from(groups.entries())
     .map(([code, members]) => {
-      const totalPoints    = members.reduce((sum, p) => sum + p.points, 0);
-      const bestPlayer     = [...members].sort((a, b) => b.points - a.points)[0];
-      const departmentName = members[0]?.departmentName ?? "Inconnu";
+      const total = members.reduce((s, p) => s + p.points, 0);
+      const best  = [...members].sort((a, b) => b.points - a.points)[0];
       return {
         departmentCode: code,
-        departmentName,
-        playerCount:    members.length,
-        totalPoints,
-        averagePoints:  Math.round(totalPoints / members.length),
-        bestPlayer,
+        departmentName: members[0]?.departmentName ?? "Inconnu",
+        playerCount:   members.length,
+        totalPoints:   total,
+        averagePoints: Math.round(total / members.length),
+        bestPlayer:    best,
       } satisfies DepartmentStats;
     })
     .sort((a, b) => b.totalPoints - a.totalPoints);
 }
 
 // ---------------------------------------------------------------------------
-// Debug : tente plusieurs endpoints et retourne un rapport
+// Debug : info sur le contest résolu
+// ---------------------------------------------------------------------------
+export interface ContestInfo {
+  contestId: string;
+  title: string;
+  totalUsers: number;
+  userRanking: number;
+  userTotalPoints: number;
+  isLive?: boolean;
+}
+
+export async function getContestInfo(): Promise<ContestInfo | null> {
+  try {
+    const data   = await getUserContests();
+    const all    = [...(data.contestsCards ?? []), ...(data.pinnedChallengesCards ?? [])];
+    const target = await resolveContestId();
+    const card   = all.find((c) => c.contestId === target);
+    if (!card) return null;
+    return {
+      contestId:       card.contestId,
+      title:           card.title,
+      totalUsers:      card.totalUsers,
+      userRanking:     card.userRanking,
+      userTotalPoints: card.userTotalPoints,
+      isLive:          card.isLive,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Debug : probe (gardé pour compatibilité, simplifié)
 // ---------------------------------------------------------------------------
 export interface ProbeResult {
   path: string;
@@ -229,32 +251,20 @@ export interface ProbeResult {
   hint?: string;
 }
 
-export async function probeRankingEndpoints(leagueId: string): Promise<ProbeResult[]> {
-  const candidates = [
-    `/private-leagues/${leagueId}/ranking`,
-    `/private-leagues/${leagueId}/rankings`,
-    `/groups/${leagueId}/ranking`,
-    `/groups/${leagueId}/rankings`,
-    `/user-groups/${leagueId}/ranking`,
-    `/competitions/current/private-leagues/${leagueId}/ranking`,
-  ];
-
+export async function probeRankingEndpoints(challengeId: string): Promise<ProbeResult[]> {
   const results: ProbeResult[] = [];
-
-  for (const path of candidates) {
-    try {
-      const data = await requestMpp<unknown>(path);
-      const players = extractPlayersArray(data);
-      if (players.length > 0) {
-        results.push({ path, status: "ok", playerCount: players.length, hint: "✅ Endpoint valide" });
-      } else {
-        results.push({ path, status: "empty", hint: "Réponse vide — mauvais league ID ?" });
-      }
-    } catch (err) {
-      const detail = err instanceof MppApiError ? `HTTP ${err.status}` : "Erreur réseau";
-      results.push({ path, status: "error", hint: detail });
+  const path = `/challenge-standings/top-users-standings?challengeId=${encodeURIComponent(challengeId)}&limit=200`;
+  try {
+    const data = await requestMpp<unknown>(path);
+    const entries = extractStandings(data);
+    if (entries.length > 0) {
+      results.push({ path, status: "ok", playerCount: entries.length, hint: "✅ Endpoint valide" });
+    } else {
+      results.push({ path, status: "empty", hint: "Réponse vide — challengeId invalide ?" });
     }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    results.push({ path, status: "error", hint: msg });
   }
-
   return results;
 }
