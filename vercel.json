@@ -1,15 +1,11 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "dist/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["public/**", "src/views/**"]
-      }
+  "buildCommand": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "public/**,src/views/**"
     }
-  ],
+  },
   "routes": [
-    { "src": "/(.*)", "dest": "/dist/server.js" }
+    { "src": "/(.*)", "dest": "/api/index.ts" }
   ]
 }

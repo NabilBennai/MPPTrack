@@ -36,7 +36,7 @@ function formatDate(): string {
 // Page principale
 // ---------------------------------------------------------------------------
 export async function mppIndexHandler(_req: Request, res: Response): Promise<void> {
-  res.sendFile(path.resolve(__dirname, "..", "..", "src", "views", "mpp", "index.html"));
+  res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "index.html"));
 }
 
 // ---------------------------------------------------------------------------
