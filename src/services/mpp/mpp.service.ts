@@ -99,7 +99,7 @@ async function resolveContestId(): Promise<string | undefined> {
 }
 
 // ---------------------------------------------------------------------------
-// GET /challenge-standings/top-users-standings?challengeId={id}&limit=200
+// GET /challenge-standings/users-standings?challengeId={id}&offset={n}&limit={n}
 // ---------------------------------------------------------------------------
 function extractStandings(raw: unknown): MppRawStandingEntry[] {
   if (Array.isArray(raw)) return raw as MppRawStandingEntry[];
@@ -117,13 +117,38 @@ function extractStandings(raw: unknown): MppRawStandingEntry[] {
 }
 
 function getConfiguredStandingsLimit(totalUsers?: number): number {
+  const minimumExpectedLeagueSize = 300;
   const configured = Number.parseInt(process.env["MPP_STANDINGS_LIMIT"] ?? "", 10);
+  if (Number.isFinite(configured) && configured > 0) {
+    return Math.max(configured, totalUsers ?? 0, minimumExpectedLeagueSize);
+  }
+
+  // Some MPP endpoints cap a single response. Keep the global fetch bounded,
+  // but do not trust totalUsers as a hard stop because contest cards can lag.
+  return Math.max(totalUsers ?? 0, 1000, minimumExpectedLeagueSize);
+}
+
+function getStandingsPageSize(): number {
+  const configured = Number.parseInt(process.env["MPP_STANDINGS_PAGE_SIZE"] ?? "", 10);
   if (Number.isFinite(configured) && configured > 0) return configured;
 
-  // The old default of 200 silently truncated leagues with more members.
-  // When the contest card exposes the league size, request enough rows for it;
-  // otherwise use a generous default that still stays bounded.
-  return Math.max(totalUsers ?? 0, 1000);
+  return 20;
+}
+
+function getStandingEntryKey(entry: MppRawStandingEntry): string | undefined {
+  const user = (typeof entry["user"] === "object" && entry["user"] !== null ? entry["user"] : {}) as Record<string, unknown>;
+  const id = user["id"] ?? entry.userId ?? entry.id;
+  if (id !== undefined && id !== null) return `id:${String(id)}`;
+
+  const username = user["username"] ?? user["pseudo"] ?? user["firstName"] ?? entry.username ?? entry.pseudo ?? entry.firstName;
+  const ranking = (typeof entry["ranking"] === "object" && entry["ranking"] !== null ? entry["ranking"] : {}) as Record<string, unknown>;
+  const rank = ranking["rank"] ?? entry.rank ?? entry.ranking;
+
+  if (username !== undefined && username !== null && rank !== undefined && rank !== null) {
+    return `rank-user:${String(rank)}:${String(username)}`;
+  }
+
+  return undefined;
 }
 
 async function getContestTotalUsers(contestId: string): Promise<number | undefined> {
@@ -141,11 +166,36 @@ async function getContestTotalUsers(contestId: string): Promise<number | undefin
 }
 
 async function fetchRawStandings(contestId: string, totalUsers?: number): Promise<MppRawStandingEntry[]> {
-  const limit = getConfiguredStandingsLimit(totalUsers);
-  const raw = await requestMpp<unknown>(
-    `/challenge-standings/top-users-standings?challengeId=${encodeURIComponent(contestId)}&limit=${limit}`
-  );
-  return extractStandings(raw);
+  const maxEntries = getConfiguredStandingsLimit(totalUsers);
+  const pageSize = getStandingsPageSize();
+  const entries: MppRawStandingEntry[] = [];
+  const seen = new Set<string>();
+  let offset = 0;
+
+  while (entries.length < maxEntries) {
+    const limit = Math.min(pageSize, maxEntries - entries.length);
+    const path = `/challenge-standings/users-standings?challengeId=${encodeURIComponent(contestId)}&offset=${offset}&limit=${limit}`;
+    const raw = await requestMpp<unknown>(path);
+    const page = extractStandings(raw);
+
+    if (page.length === 0) break;
+
+    let added = 0;
+    for (const entry of page) {
+      const key = getStandingEntryKey(entry);
+      if (key && seen.has(key)) continue;
+      if (key) seen.add(key);
+      entries.push(entry);
+      added += 1;
+      if (entries.length >= maxEntries) break;
+    }
+
+    if (added === 0) break;
+
+    offset += page.length;
+  }
+
+  return entries;
 }
 
 // ---------------------------------------------------------------------------
@@ -284,8 +334,8 @@ export interface ProbeResult {
 
 export async function probeRankingEndpoints(challengeId: string): Promise<ProbeResult[]> {
   const results: ProbeResult[] = [];
-  const limit = getConfiguredStandingsLimit(await getContestTotalUsers(challengeId));
-  const path = `/challenge-standings/top-users-standings?challengeId=${encodeURIComponent(challengeId)}&limit=${limit}`;
+  const limit = getStandingsPageSize();
+  const path = `/challenge-standings/users-standings?challengeId=${encodeURIComponent(challengeId)}&offset=0&limit=${limit}`;
   try {
     const data = await requestMpp<unknown>(path);
     const entries = extractStandings(data);
