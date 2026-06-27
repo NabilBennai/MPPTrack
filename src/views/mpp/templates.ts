@@ -31,21 +31,21 @@ function pct(num: number | undefined, den: number | undefined): string {
 // ---------------------------------------------------------------------------
 function deptColor(code: DepartmentCode): { solid: string; dim: string; text: string; border: string } {
   switch (code) {
-    case "MT": return { solid: "#3b9eff", dim: "rgba(59,158,255,0.12)",  text: "#7ec8ff", border: "rgba(59,158,255,0.3)"  };
-    case "ES": return { solid: "#a855f7", dim: "rgba(168,85,247,0.12)",  text: "#d09bff", border: "rgba(168,85,247,0.3)"  };
-    case "TD": return { solid: "#10d48a", dim: "rgba(16,212,138,0.12)",  text: "#5effc0", border: "rgba(16,212,138,0.3)"  };
-    case "WD": return { solid: "#ff7a3d", dim: "rgba(255,122,61,0.12)",  text: "#ffb08a", border: "rgba(255,122,61,0.3)"  };
-    default:   return { solid: "#6b6b8a", dim: "rgba(107,107,138,0.1)",  text: "#a0a0c0", border: "rgba(107,107,138,0.25)" };
+    case "MT": return { solid: "#3B9EFF", dim: "rgba(59,158,255,0.12)",  text: "#7EC8FF", border: "rgba(59,158,255,0.28)"  };
+    case "ES": return { solid: "#A855F7", dim: "rgba(168,85,247,0.12)",  text: "#C084FC", border: "rgba(168,85,247,0.28)"  };
+    case "TD": return { solid: "#22C55E", dim: "rgba(34,197,94,0.10)",   text: "#4ADE80", border: "rgba(34,197,94,0.28)"   };
+    case "WD": return { solid: "#F97316", dim: "rgba(249,115,22,0.12)",  text: "#FDBA74", border: "rgba(249,115,22,0.28)"  };
+    default:   return { solid: "#64748B", dim: "rgba(100,116,139,0.10)", text: "#94A3B8", border: "rgba(100,116,139,0.25)" };
   }
 }
 
 function deptRowFill(code: DepartmentCode): string {
   switch (code) {
-    case "MT": return "rgba(59,158,255,0.06)";
-    case "ES": return "rgba(168,85,247,0.06)";
-    case "TD": return "rgba(16,212,138,0.06)";
-    case "WD": return "rgba(255,122,61,0.06)";
-    default:   return "rgba(107,107,138,0.04)";
+    case "MT": return "rgba(59,158,255,0.055)";
+    case "ES": return "rgba(168,85,247,0.055)";
+    case "TD": return "rgba(34,197,94,0.05)";
+    case "WD": return "rgba(249,115,22,0.055)";
+    default:   return "rgba(100,116,139,0.04)";
   }
 }
 
@@ -59,26 +59,26 @@ function avatarImg(p: MppPlayer, px: number): string {
   const initials = esc(p.pseudo.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase() || "??");
   const base     = `width:${px}px;height:${px}px;border-radius:50%;flex-shrink:0;outline:2px solid ${c.solid};outline-offset:1.5px;`;
   if (p.avatarUrl) {
-    return `<img src="${esc(p.avatarUrl)}" alt="" style="${base}object-fit:cover;background:#101520" loading="lazy">`;
+    return `<img src="${esc(p.avatarUrl)}" alt="" style="${base}object-fit:cover;background:#1A2335" loading="lazy">`;
   }
-  return `<div style="${base}background:#0f1828;display:flex;align-items:center;justify-content:center;font-size:${Math.round(px * 0.3)}px;font-weight:700;color:${c.text};font-family:'Manrope',sans-serif">${initials}</div>`;
+  return `<div style="${base}background:#1A2335;display:flex;align-items:center;justify-content:center;font-size:${Math.round(px * 0.3)}px;font-weight:700;color:${c.text};font-family:'Manrope',sans-serif">${initials}</div>`;
 }
 
 function rankDisplay(rank: number, isFiltered: boolean, globalRank?: number): string {
   let color: string;
   let size: string;
   let glow = "";
-  if (rank === 1)      { color = "#f5c84a"; size = "1.5rem";  glow = "text-shadow:0 0 18px rgba(245,200,74,0.5)"; }
-  else if (rank === 2) { color = "#9db5ca"; size = "1.4rem";  glow = ""; }
-  else if (rank === 3) { color = "#d47f52"; size = "1.3rem";  glow = ""; }
-  else                 { color = "#2e2850"; size = "0.95rem"; glow = ""; }
+  if (rank === 1)      { color = "#FBBF24"; size = "1.5rem";  glow = "text-shadow:0 0 14px rgba(251,191,36,0.5)"; }
+  else if (rank === 2) { color = "#8AAFC4"; size = "1.4rem";  glow = ""; }
+  else if (rank === 3) { color = "#CD7C42"; size = "1.3rem";  glow = ""; }
+  else                 { color = "#475569"; size = "0.95rem"; glow = ""; }
 
   const primary = `<span class="font-oswald" style="color:${color};font-size:${size};font-weight:700;line-height:1;${glow}">${rank}</span>`;
 
   if (isFiltered && globalRank !== undefined) {
     return `<div style="display:flex;flex-direction:column;gap:3px">
       ${primary}
-      <span style="font-size:10px;color:#2e2850;font-family:'Manrope',sans-serif;line-height:1">#${globalRank} gén.</span>
+      <span style="font-size:10px;color:#475569;font-family:'Manrope',sans-serif;line-height:1">#${globalRank} gén.</span>
     </div>`;
   }
   return primary;
@@ -90,8 +90,8 @@ function rankDisplay(rank: number, isFiltered: boolean, globalRank?: number): st
 function expandBtn(playerId: string, open: boolean): string {
   const endpoint = open ? `/player/${playerId}/close` : `/player/${playerId}`;
   const s = open
-    ? "background:rgba(124,107,248,0.18);border:1px solid rgba(124,107,248,0.4);color:#a99bff;box-shadow:0 0 10px rgba(124,107,248,0.2)"
-    : "background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#5c5578";
+    ? "background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);color:#22C55E"
+    : "background:rgba(255,255,255,0.04);border:1px solid rgba(148,163,184,0.09);color:#475569";
   return `<button
     id="btn-${esc(playerId)}"
     style="${s};width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto;cursor:pointer;transition:all 0.15s;font-size:10px"
@@ -116,14 +116,14 @@ export function renderClassement(
   const isFiltered = Boolean(departmentFilter && departmentFilter !== "");
 
   const banner = usingMock
-    ? `<div style="padding:10px 20px;font-size:12px;color:#fbbf24;background:rgba(120,80,0,0.18);border-bottom:1px solid rgba(251,191,36,0.15);display:flex;align-items:center;gap:8px">
+    ? `<div style="padding:10px 20px;font-size:12px;color:#92640A;background:rgba(201,138,0,0.10);border-bottom:1.5px solid rgba(201,138,0,0.20);display:flex;align-items:center;gap:8px">
          <span>⚠</span>
-         <span>Mode démo — ajoutez <code style="font-family:monospace;background:rgba(251,191,36,0.1);padding:0 4px;border-radius:3px">MPP_ACCESS_TOKEN</code> dans <code style="font-family:monospace;background:rgba(251,191,36,0.1);padding:0 4px;border-radius:3px">.env</code> pour les vraies données.</span>
+         <span>Mode démo — ajoutez <code style="font-family:monospace;background:rgba(201,138,0,0.12);padding:0 4px;border-radius:3px">MPP_ACCESS_TOKEN</code> dans <code style="font-family:monospace;background:rgba(201,138,0,0.12);padding:0 4px;border-radius:3px">.env</code> pour les vraies données.</span>
        </div>`
     : "";
 
   if (players.length === 0) {
-    return `${banner}<p style="text-align:center;padding:56px 0;font-size:14px;color:#2e2850">Aucun joueur pour ce filtre.</p>`;
+    return `${banner}<p style="text-align:center;padding:56px 0;font-size:14px;color:#6A8874">Aucun joueur pour ce filtre.</p>`;
   }
 
   const maxPts = players[0]?.points ?? 1;
@@ -134,7 +134,7 @@ export function renderClassement(
     const fill     = deptRowFill(p.departmentCode);
     const c        = deptColor(p.departmentCode);
     const isTop3   = isFiltered ? deptRank <= 3 : p.rank <= 3;
-    const rowStyle = `--pts-pct:${ptsPct}%;--row-fill:${fill};border-bottom:1px solid rgba(255,255,255,0.04)`;
+    const rowStyle = `--pts-pct:${ptsPct}%;--row-fill:${fill};border-bottom:1px solid rgba(148,163,184,0.07)`;
 
     const dataAttrs = [
       `data-id="${esc(p.id)}"`,
@@ -168,16 +168,16 @@ export function renderClassement(
         ${rankCell}
         <td style="padding:8px;width:44px;vertical-align:middle">${avatarImg(p, 36)}</td>
         <td style="padding:10px 12px;vertical-align:middle;max-width:200px">
-          <div style="font-weight:600;font-size:14px;color:#ede9ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.pseudo)}">${esc(p.pseudo)}</div>
+          <div style="font-weight:600;font-size:14px;color:#F1F5F9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.pseudo)}">${esc(p.pseudo)}</div>
           ${mobileDeptBadge}
         </td>
         ${deptCell}
-        <td style="padding:10px 16px;text-align:right;vertical-align:middle">
-          <span class="font-oswald" style="font-size:17px;font-weight:600;color:${isTop3 ? c.text : "#ede9ff"};letter-spacing:0.01em">${p.points.toLocaleString("fr-FR")}</span>
+        <td style="padding:10px 14px;text-align:right;vertical-align:middle">
+          <span class="font-oswald" style="font-size:17px;font-weight:600;color:${isTop3 ? c.text : "#F1F5F9"};letter-spacing:0.01em">${p.points.toLocaleString("fr-FR")}</span>
         </td>
-        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#5c5578;font-variant-numeric:tabular-nums">${fmt(p.goodResults)}</td>
-        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#10d48a;font-variant-numeric:tabular-nums">${fmt(p.exactScores)}</td>
-        <td class="hidden md:table-cell" style="padding:10px 12px;text-align:right;vertical-align:middle;font-size:12px;color:#2e2850;font-variant-numeric:tabular-nums">${fmt(p.playedPredictions)}</td>
+        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#64748B;font-variant-numeric:tabular-nums">${fmt(p.goodResults)}</td>
+        <td class="hidden sm:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:13px;color:#4ADE80;font-weight:600;font-variant-numeric:tabular-nums">${fmt(p.exactScores)}</td>
+        <td class="hidden md:table-cell" style="padding:10px 14px;text-align:right;vertical-align:middle;font-size:12px;color:#334155;font-variant-numeric:tabular-nums">${fmt(p.playedPredictions)}</td>
         <td style="padding:10px 12px;width:44px;vertical-align:middle">${expandBtn(p.id, false)}</td>
       </tr>
       <tr id="detail-${esc(p.id)}"></tr>`;
@@ -186,26 +186,30 @@ export function renderClassement(
   const thStyle = (align = "right", extra = "") =>
     `style="padding:0 ${align === "left" ? "12px" : "14px"};text-align:${align};${extra}"`;
 
+  // thStyle: padding must exactly match td horizontal padding for column alignment
+  const thCol = (align: string, pad: string) =>
+    `style="padding:0 ${pad};text-align:${align}"`;
+
   const rankTh = isFiltered
-    ? `<th data-sort="rank" onclick="sortBy('rank')" style="padding-left:20px;text-align:left;width:72px">Rang<span class="si" style="color:#7c6bf8"> ↕</span></th>`
-    : `<th data-sort="rank" onclick="sortBy('rank')" style="padding-left:20px;width:48px;text-align:center"><span class="si" style="color:#7c6bf8"> ↑</span></th>`;
-  const deptTh = isFiltered ? "" : `<th class="hidden sm:table-cell" style="padding:0 16px;text-align:left">Département</th>`;
+    ? `<th data-sort="rank" onclick="sortBy('rank')" style="padding-left:20px;padding-right:8px;text-align:left;width:72px">Rang<span class="si" style="color:#22C55E"> ↕</span></th>`
+    : `<th data-sort="rank" onclick="sortBy('rank')" style="padding-left:20px;padding-right:8px;width:48px;text-align:center"><span class="si" style="color:#22C55E"> ↑</span></th>`;
+  const deptTh = isFiltered ? "" : `<th class="hidden sm:table-cell" ${thCol("left","16px")}>Département</th>`;
 
   return `
     ${banner}
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse">
-        <thead class="table-head" style="position:sticky;top:0;z-index:10;background:#12101c">
+        <thead class="table-head" style="position:sticky;top:0;z-index:10">
           <tr>
             ${rankTh}
-            <th style="width:44px"></th>
-            <th style="padding:0 12px;text-align:left">Joueur</th>
+            <th style="width:44px;padding:0 8px"></th>
+            <th ${thCol("left","12px")}>Joueur</th>
             ${deptTh}
-            <th data-sort="pts" onclick="sortBy('pts')" ${thStyle("right")}>Points<span class="si" style="color:#7c6bf8"> ↕</span></th>
-            <th data-sort="pronos" onclick="sortBy('pronos')" class="hidden sm:table-cell" ${thStyle()}>Pronos<span class="si" style="color:#7c6bf8"> ↕</span></th>
-            <th data-sort="exacts" onclick="sortBy('exacts')" class="hidden sm:table-cell" ${thStyle()}>Exacts<span class="si" style="color:#7c6bf8"> ↕</span></th>
-            <th data-sort="played" onclick="sortBy('played')" class="hidden md:table-cell" ${thStyle()}>Joués<span class="si" style="color:#7c6bf8"> ↕</span></th>
-            <th style="width:44px"></th>
+            <th data-sort="pts"    onclick="sortBy('pts')"    ${thCol("right","14px")}>Points<span class="si" style="color:#22C55E"> ↕</span></th>
+            <th data-sort="pronos" onclick="sortBy('pronos')" ${thCol("right","14px")} class="hidden sm:table-cell">Pronos<span class="si" style="color:#22C55E"> ↕</span></th>
+            <th data-sort="exacts" onclick="sortBy('exacts')" ${thCol("right","14px")} class="hidden sm:table-cell">Exacts<span class="si" style="color:#22C55E"> ↕</span></th>
+            <th data-sort="played" onclick="sortBy('played')" ${thCol("right","14px")} class="hidden md:table-cell">Joués<span class="si" style="color:#22C55E"> ↕</span></th>
+            <th style="width:44px;padding:0 8px"></th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -225,28 +229,28 @@ export function renderPlayerExpandRow(player: MppPlayer): string {
     : "—";
 
   const statBlock = (label: string, value: string, sub: string, valueColor: string) => `
-    <div style="flex:1;min-width:80px;text-align:center;padding:14px 10px;border-right:1px solid rgba(255,255,255,0.05)">
+    <div style="flex:1;min-width:80px;text-align:center;padding:14px 10px;border-right:1px solid rgba(148,163,184,0.07)">
       <div class="font-oswald" style="font-size:1.4rem;font-weight:600;color:${valueColor};line-height:1;letter-spacing:0.01em">${value}</div>
-      ${sub ? `<div style="font-size:10px;color:#4e6278;margin-top:3px;font-variant-numeric:tabular-nums">${sub}</div>` : ""}
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#243040;margin-top:6px;font-weight:700">${label}</div>
+      ${sub ? `<div style="font-size:10px;color:#475569;margin-top:3px;font-variant-numeric:tabular-nums">${sub}</div>` : ""}
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#334155;margin-top:6px;font-weight:700">${label}</div>
     </div>`;
 
   const detailRow = `
-    <tr id="detail-${esc(player.id)}" class="detail-expand" style="border-bottom:1px solid rgba(255,255,255,0.05)">
+    <tr id="detail-${esc(player.id)}" class="detail-expand" style="border-bottom:1px solid rgba(148,163,184,0.07)">
       <td colspan="99" style="padding:0">
-        <div style="display:flex;align-items:stretch;border-left:3px solid ${c.solid};background:rgba(255,255,255,0.018)">
-          <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-right:1px solid rgba(255,255,255,0.06);flex-shrink:0">
+        <div style="display:flex;align-items:stretch;border-left:3px solid ${c.solid};background:#1A2335">
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-right:1px solid rgba(148,163,184,0.07);flex-shrink:0">
             ${avatarImg(player, 40)}
             <div>
-              <div style="font-weight:700;font-size:14px;color:#ede9ff;white-space:nowrap">${esc(player.pseudo)}</div>
+              <div style="font-weight:700;font-size:14px;color:#F1F5F9;white-space:nowrap">${esc(player.pseudo)}</div>
               <div style="margin-top:5px">${deptBadge(player.departmentCode, player.departmentName)}</div>
             </div>
           </div>
           <div style="display:flex;flex:1;overflow-x:auto">
-            ${statBlock("Points",        player.points.toLocaleString("fr-FR"), `${ptsPerM} pts / match`, "#ede9ff")}
-            ${statBlock("Bons pronos",   fmt(player.goodResults),  goodPct,  "#ede9ff")}
+            ${statBlock("Points",        player.points.toLocaleString("fr-FR"), `${ptsPerM} pts / match`, "#F1F5F9")}
+            ${statBlock("Bons pronos",   fmt(player.goodResults),  goodPct,  "#F1F5F9")}
             ${statBlock("Scores exacts", fmt(player.exactScores),  exactPct, c.text)}
-            ${statBlock("Joués",         fmt(player.playedPredictions), "",  "#5c5578")}
+            ${statBlock("Joués",         fmt(player.playedPredictions), "",  "#475569")}
           </div>
         </div>
       </td>
@@ -294,16 +298,16 @@ export function renderStats(stats: DepartmentStats[]): string {
           hx-swap="innerHTML"
           style="text-align:left;padding:12px 14px;cursor:pointer;width:100%"
         >
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
             <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:${c.text}">${esc(s.departmentName)}</span>
-            <span class="font-oswald" style="font-size:1.3rem;font-weight:700;color:#ede9ff;line-height:1;flex-shrink:0">${s.playerCount}</span>
+            <span class="font-oswald" style="font-size:1.45rem;font-weight:700;color:#F1F5F9;line-height:1;flex-shrink:0">${s.playerCount}</span>
           </div>
-          <div style="font-size:11px;color:#5c5578;line-height:1.6">
-            Moy. <span style="color:#ede9ff;font-weight:700">${s.averagePoints.toLocaleString("fr-FR")}</span>
-            <span style="color:#2e2850;margin:0 3px">·</span>
-            <span style="color:#a0a0c0;font-weight:500">${s.totalPoints.toLocaleString("fr-FR")} pts</span>
+          <div style="font-size:11px;color:#64748B;line-height:1.6">
+            Moy. <span style="color:#F1F5F9;font-weight:700">${s.averagePoints.toLocaleString("fr-FR")}</span>
+            <span style="color:#334155;margin:0 3px">·</span>
+            <span style="color:#94A3B8;font-weight:500">${s.totalPoints.toLocaleString("fr-FR")} pts</span>
           </div>
-          ${best ? `<div style="font-size:10px;color:#2e2850;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(best.pseudo)}">🏆 ${esc(best.pseudo)}</div>` : ""}
+          ${best ? `<div style="font-size:10px;color:#475569;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(best.pseudo)}">⚽ ${esc(best.pseudo)}</div>` : ""}
         </button>`;
     }).join("");
 

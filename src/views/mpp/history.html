@@ -92,7 +92,7 @@
   </main>
 
   <script>
-    const colors = ['#7c6bf8','#10d48a','#3b9eff','#f5c84a','#ff7a3d','#d09bff','#55d5e0','#f06f9b'];
+    const colors = ['#156B38','#1E6BC8','#7B3AC8','#C98A00','#D45A18','#1A8A5C','#B83244','#0891B2'];
     const fmt = new Intl.NumberFormat('fr-FR');
     const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Paris' });
     const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -151,14 +151,14 @@
         return `${leaderArea}<path d="${path}" class="chart-series ${idx === 0 ? 'chart-series-leader' : ''}" data-series="${idx}" fill="none" stroke="${color}" stroke-width="${idx === 0 ? 4 : 2}" stroke-opacity="${idx === 0 ? 1 : .64}" stroke-linecap="round" stroke-linejoin="round">
           <title>${escapeHtml(s.pseudo)} · rang #${last[rankKey]}</title>
         </path>
-          <circle cx="${x(s.positions.length-1)}" cy="${y(last[rankKey])}" r="${idx === 0 ? 6 : 4}" fill="${color}" stroke="#12101c" stroke-width="3">
+          <circle cx="${x(s.positions.length-1)}" cy="${y(last[rankKey])}" r="${idx === 0 ? 6 : 4}" fill="${color}" stroke="#ffffff" stroke-width="3">
             <title>${escapeHtml(s.pseudo)} · rang #${last[rankKey]}</title>
           </circle>`;
       }).join('');
       document.getElementById('points-chart').innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Évolution des rangs e-SCM">
         <defs>
-          <linearGradient id="leader-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a855f7" stop-opacity=".28"/><stop offset="1" stop-color="#a855f7" stop-opacity="0"/></linearGradient>
-          <filter id="leader-glow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="leader-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#156B38" stop-opacity=".18"/><stop offset="1" stop-color="#156B38" stop-opacity="0"/></linearGradient>
+          <filter id="leader-glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
         <rect x="${padX}" y="${padTop}" width="${width-padX*2}" height="${plotHeight}" rx="14" class="chart-plot-bg"/>
         ${grid}${timeLabels}${lines}
@@ -219,10 +219,10 @@
       renderDepartmentScope(data);
       const best = [...data.series].sort((a,b) => b.globalRankChange-a.globalRankChange)[0];
       document.getElementById('metric-grid').innerHTML = [
-        metric('Instantanés', fmt.format(data.snapshotCount), `un relevé / ${data.intervalMinutes} min`, '#7c6bf8'),
-        metric('Membres e‑SCM', fmt.format(data.playerCount), 'positions uniquement', '#a855f7'),
-        metric('Leader e‑SCM', data.series[0] ? escapeHtml(data.series[0].pseudo) : '—', data.series[0] ? `global #${data.series[0].currentGlobalRank}` : 'en attente', '#f5c84a'),
-        metric('Plus forte hausse', best && best.globalRankChange > 0 ? escapeHtml(best.pseudo) : '—', 'au classement global', '#10d48a')
+        metric('Instantanés', fmt.format(data.snapshotCount), `un relevé / ${data.intervalMinutes} min`, '#156B38'),
+        metric('Membres e‑SCM', fmt.format(data.playerCount), 'positions uniquement', '#7B3AC8'),
+        metric('Leader e‑SCM', data.series[0] ? escapeHtml(data.series[0].pseudo) : '—', data.series[0] ? `global #${data.series[0].currentGlobalRank}` : 'en attente', '#C98A00'),
+        metric('Plus forte hausse', best && best.globalRankChange > 0 ? escapeHtml(best.pseudo) : '—', 'au classement global', '#1A8A5C')
       ].join('');
       const empty = data.snapshotCount === 0 || data.series.length === 0;
       document.getElementById('empty-state').hidden = !empty;
