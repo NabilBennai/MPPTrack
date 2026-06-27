@@ -102,124 +102,87 @@ function renderPointsBoard(series, liveDataAvailable) {
   const sorted = [...series].sort((a, b) => b.currentPoints - a.currentPoints);
   if (!sorted.length) return;
 
-  const recentGain = s => {
-    if (liveDataAvailable) return s.pointsChange;
-    const n = s.positions.length;
-    return n >= 2 ? s.positions[n-1].points - s.positions[n-2].points : 0;
-  };
-
-  const maxPts = sorted[0].currentPoints;
-  const minPts = sorted[sorted.length - 1].currentPoints;
-  const range  = Math.max(maxPts - minPts, 1);
   const n      = sorted.length;
+  const maxPts = sorted[0].currentPoints;
+  const minPts = sorted[n - 1].currentPoints;
+  const range  = Math.max(maxPts - minPts, 1);
 
-  // SVG layout constants
-  const W      = 560;
-  const axisX  = 110;   // x of the spine; left side reserved for gap labels
-  const PT     = 40;    // top padding
-  const PB     = 32;    // bottom padding
-  const plotH  = Math.max(360, n * 46);
-  const H      = plotH + PT + PB;
+  const W = 620, AX = 220, PT = 36, PB = 32;
+  const plotH = Math.max(280, n * 44);
+  const H     = plotH + PT + PB;
 
-  // True proportional Y: max pts → top (small y), min pts → bottom (large y)
   const yOf = pts => PT + (1 - (pts - minPts) / range) * plotH;
 
-  // Build nodes with raw (proportional) y
+  // Dots at true proportional position; labels start there then de-collide
   const nodes = sorted.map((s, idx) => ({
     s, idx,
     color: COLORS[idx % COLORS.length],
-    pts:  s.currentPoints,
-    gain: recentGain(s),
+    pts: s.currentPoints,
     rawY: yOf(s.currentPoints),
-    y:    yOf(s.currentPoints),   // de-collided label y, adjusted below
+    y:    yOf(s.currentPoints),
+    side: 'right',
   }));
 
-  // Enforce minimum 36 px between labels (downward pass then upward pass)
-  const MIN = 36;
-  for (let i = 1; i < nodes.length; i++)
-    if (nodes[i].y - nodes[i-1].y < MIN) nodes[i].y = nodes[i-1].y + MIN;
-  const floorY = H - PB - 8;
-  for (let i = nodes.length - 1; i >= 0; i--) {
-    if (nodes[i].y > floorY) nodes[i].y = floorY;
-    if (i > 0 && nodes[i-1].y > nodes[i].y - MIN) nodes[i-1].y = nodes[i].y - MIN;
+  // Assign sides: when consecutive dots are within threshold, alternate
+  const CLOSE = 42;
+  for (let i = 1; i < n; i++) {
+    const gap = nodes[i].rawY - nodes[i-1].rawY;
+    nodes[i].side = gap < CLOSE ? (nodes[i-1].side === 'right' ? 'left' : 'right') : 'right';
   }
 
-  // ── Axis spine ──
-  const spine = `<line x1="${axisX}" y1="${PT - 10}" x2="${axisX}" y2="${H - PB + 10}"
-    stroke="rgba(148,163,184,.2)" stroke-width="1.5"/>`;
+  // De-collide each side independently — half the players means much smaller nudges
+  const MIN_GAP = 24, floor = H - PB - 6;
+  ['right', 'left'].forEach(side => {
+    const g = nodes.filter(nd => nd.side === side);
+    for (let i = 1; i < g.length; i++)
+      if (g[i].y - g[i-1].y < MIN_GAP) g[i].y = g[i-1].y + MIN_GAP;
+    for (let i = g.length - 1; i >= 0; i--) {
+      if (g[i].y > floor) g[i].y = floor;
+      if (i > 0 && g[i-1].y > g[i].y - MIN_GAP) g[i-1].y = g[i].y - MIN_GAP;
+    }
+  });
 
-  // ── Scale markers at top and bottom ──
-  const scale = `
-    <text x="${axisX - 12}" y="${PT - 2}" fill="#334155" font-size="9" text-anchor="end"
-      font-family="Manrope,sans-serif" font-weight="800">${numFmt.format(maxPts)}</text>
-    <text x="${axisX - 12}" y="${H - PB + 12}" fill="#334155" font-size="9" text-anchor="end"
-      font-family="Manrope,sans-serif" font-weight="800">${numFmt.format(minPts)}</text>
-    <line x1="${axisX - 5}" y1="${PT}" x2="${axisX}" y2="${PT}" stroke="rgba(148,163,184,.25)" stroke-width="1"/>
-    <line x1="${axisX - 5}" y1="${H - PB}" x2="${axisX}" y2="${H - PB}" stroke="rgba(148,163,184,.25)" stroke-width="1"/>`;
+  const podC = i => i===0?'#FBBF24':i===1?'#8AAFC4':i===2?'#CD7C42':'#475569';
 
-  // ── Gap annotations between consecutive nodes (left of axis) ──
-  const gapSvg = nodes.slice(0, -1).map((node, i) => {
-    const next = nodes[i + 1];
-    const gap  = node.pts - next.pts;
-    if (gap <= 0) return '';
-    const midY = (node.rawY + next.rawY) / 2;
-    const bx   = axisX - 14;
-    return `
-      <line x1="${bx}" y1="${node.rawY + 6}" x2="${bx}" y2="${next.rawY - 6}"
-        stroke="rgba(148,163,184,.12)" stroke-width="1"/>
-      <line x1="${bx}" y1="${node.rawY + 6}" x2="${bx + 5}" y2="${node.rawY + 6}"
-        stroke="rgba(148,163,184,.12)" stroke-width="1"/>
-      <line x1="${bx}" y1="${next.rawY - 6}" x2="${bx + 5}" y2="${next.rawY - 6}"
-        stroke="rgba(148,163,184,.12)" stroke-width="1"/>
-      <text x="${bx - 5}" y="${midY + 4}" fill="#2D3F55" font-size="9" text-anchor="end"
-        font-family="Manrope,sans-serif" font-weight="800">−${numFmt.format(gap)}</text>`;
-  }).join('');
+  const spine = `
+    <line x1="${AX}" y1="${PT-10}" x2="${AX}" y2="${H-PB+10}" stroke="rgba(148,163,184,.2)" stroke-width="1.5"/>
+    <line x1="${AX-4}" y1="${PT}" x2="${AX+4}" y2="${PT}" stroke="rgba(148,163,184,.28)" stroke-width="1"/>
+    <line x1="${AX-4}" y1="${H-PB}" x2="${AX+4}" y2="${H-PB}" stroke="rgba(148,163,184,.28)" stroke-width="1"/>
+    <text x="${AX}" y="${PT-14}" text-anchor="middle" fill="#2D3F55" font-size="8" font-family="Manrope,sans-serif" font-weight="800">${numFmt.format(maxPts)} pts</text>
+    <text x="${AX}" y="${H-PB+20}" text-anchor="middle" fill="#2D3F55" font-size="8" font-family="Manrope,sans-serif" font-weight="800">${numFmt.format(minPts)} pts</text>`;
 
-  // ── Player nodes ──
-  const podiumColor = i => i === 0 ? '#FBBF24' : i === 1 ? '#8AAFC4' : i === 2 ? '#CD7C42' : '#475569';
-  const gColor = g => g > 0 ? '#4ADE80' : g < 0 ? '#F87171' : '#334155';
-  const gText  = g => g > 0 ? `+${numFmt.format(g)}` : g !== 0 ? numFmt.format(g) : '—';
-
-  const playerSvg = nodes.map(({ s, idx, color, pts, gain, rawY, y }) => {
-    // Connector from true axis position to de-collided label row
-    const displaced = Math.abs(y - rawY) > 5;
-    const connector = displaced
-      ? `<line x1="${axisX + 7}" y1="${rawY}" x2="${axisX + 22}" y2="${y}"
-          stroke="${color}" stroke-width="1" stroke-opacity=".22" stroke-dasharray="2 3"/>`
-      : '';
-    const name = s.pseudo.length > 16 ? s.pseudo.slice(0, 15) + '…' : s.pseudo;
-
-    return `
-      <circle cx="${axisX}" cy="${rawY}" r="5.5" fill="${color}" stroke="#0C1320" stroke-width="2.5"/>
-      ${connector}
-      <line x1="${axisX + 9}" y1="${y}" x2="${axisX + 22}" y2="${y}"
-        stroke="${color}" stroke-width="1.5" stroke-opacity=".6"/>
-      <text x="${axisX + 27}" y="${y + 4}" fill="${podiumColor(idx)}"
-        font-size="11" font-family="Oswald,sans-serif" font-weight="700">#${idx + 1}</text>
-      <text x="${axisX + 52}" y="${y + 4}" fill="#F1F5F9"
-        font-size="12" font-family="Manrope,sans-serif" font-weight="700">${esc(name)}</text>
-      <text x="${axisX + 310}" y="${y + 5}" fill="#F1F5F9"
-        font-size="16" font-family="Oswald,sans-serif" font-weight="700" text-anchor="end">${numFmt.format(pts)}</text>
-      <text x="${axisX + 315}" y="${y + 4}" fill="#2D3F55"
-        font-size="9" font-family="Manrope,sans-serif" font-weight="700">pts</text>`;
-  }).join('');
-
-  // ── Column headers ──
   const headers = `
-    <text x="${axisX + 27}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800" letter-spacing=".08em">RG</text>
-    <text x="${axisX + 52}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800" letter-spacing=".08em">JOUEUR</text>
-    <text x="${axisX + 310}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800" text-anchor="end">POINTS</text>`;
+    <text x="${AX+14}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800">RG</text>
+    <text x="${AX+40}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800">JOUEUR</text>
+    <text x="${AX+244}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800" text-anchor="end">POINTS</text>`;
 
-  const svg = `<svg viewBox="0 0 ${W} ${H}" style="display:block;width:100%;height:auto;overflow:visible"
-      role="img" aria-label="Classement par points e-SCM">
-    ${headers}
-    ${spine}${scale}
-    ${gapSvg}
-    ${playerSvg}
-  </svg>`;
+  const playerSvg = nodes.map(({ s, idx, color, pts, rawY, y, side }) => {
+    const name = s.pseudo.length > 14 ? s.pseudo.slice(0, 13) + '…' : s.pseudo;
+    const pc = podC(idx);
+    const conn = side === 'right'
+      ? `<line x1="${AX+5}" y1="${rawY}" x2="${AX+13}" y2="${y}" stroke="${color}" stroke-width="1" stroke-opacity=".4"/>`
+      : `<line x1="${AX-5}" y1="${rawY}" x2="${AX-13}" y2="${y}" stroke="${color}" stroke-width="1" stroke-opacity=".4"/>`;
+
+    if (side === 'right') return `
+      <circle cx="${AX}" cy="${rawY}" r="5.5" fill="${color}" stroke="#0C1320" stroke-width="2.5"/>
+      ${conn}
+      <text x="${AX+14}" y="${y+4}" fill="${pc}" font-size="11" font-family="Oswald,sans-serif" font-weight="700">#${idx+1}</text>
+      <text x="${AX+40}" y="${y+4}" fill="#F1F5F9" font-size="12" font-family="Manrope,sans-serif" font-weight="700">${esc(name)}</text>
+      <text x="${AX+244}" y="${y+5}" fill="#F1F5F9" font-size="16" font-family="Oswald,sans-serif" font-weight="700" text-anchor="end">${numFmt.format(pts)}</text>
+      <text x="${AX+247}" y="${y+4}" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="700">pts</text>`;
+
+    return `
+      <circle cx="${AX}" cy="${rawY}" r="5.5" fill="${color}" stroke="#0C1320" stroke-width="2.5"/>
+      ${conn}
+      <text x="${AX-14}" y="${y+4}" fill="${pc}" font-size="11" font-family="Oswald,sans-serif" font-weight="700" text-anchor="end">#${idx+1}</text>
+      <text x="${AX-40}" y="${y+4}" fill="#F1F5F9" font-size="12" font-family="Manrope,sans-serif" font-weight="700" text-anchor="end">${esc(name)}</text>
+      <text x="${AX-150}" y="${y+5}" fill="#F1F5F9" font-size="16" font-family="Oswald,sans-serif" font-weight="700" text-anchor="end">${numFmt.format(pts)}</text>`;
+  }).join('');
 
   document.getElementById('points-board-inner').innerHTML =
-    `<div style="padding:18px 20px 24px">${svg}</div>`;
+    `<div style="padding:18px 20px 24px"><svg viewBox="0 0 ${W} ${H}" style="display:block;width:100%;height:auto;overflow:visible" role="img" aria-label="Classement par points e-SCM">
+      ${headers}${spine}${playerSvg}
+    </svg></div>`;
 }
 
 // ── Rank trajectory chart (SVG) ──────────────────────────────────────────
@@ -440,7 +403,7 @@ function buildExportSVG(series, liveDataAvailable) {
   const C_BONS = TX+328, C_EXAC = TX+378, C_PTS = TX+450;
 
   // Vertical axis (right panel)
-  const AX_X = 590;          // axis spine x
+  const AX_X = 700;          // axis spine x (shifted right for left-side labels)
   const AX_PT = HDR + 40;    // top dot y
   const AX_PB = 28;
   const AX_H = SVG_H - AX_PT - AX_PB;
@@ -450,27 +413,32 @@ function buildExportSVG(series, liveDataAvailable) {
   const range  = Math.max(maxPts - minPts, 1);
   const yOf    = pts => AX_PT + (1 - (pts - minPts) / range) * AX_H;
 
+  // Dots at true proportional y; labels start there then alternate sides + de-collide
+  const CLOSE_EX = 42;
   const nodes = byPts.map((s, idx) => ({
     s, idx,
     color: COLORS[idx % COLORS.length],
     pts: s.currentPoints,
-    gain: liveDataAvailable ? s.pointsChange : 0,
     rawY: yOf(s.currentPoints),
     y:    yOf(s.currentPoints),
+    side: 'right',
   }));
-
-  const MIN_GAP = 36;
-  for (let i = 1; i < nodes.length; i++)
-    if (nodes[i].y - nodes[i-1].y < MIN_GAP) nodes[i].y = nodes[i-1].y + MIN_GAP;
-  const floorY = SVG_H - AX_PB - 6;
-  for (let i = nodes.length-1; i >= 0; i--) {
-    if (nodes[i].y > floorY) nodes[i].y = floorY;
-    if (i > 0 && nodes[i-1].y > nodes[i].y - MIN_GAP) nodes[i-1].y = nodes[i].y - MIN_GAP;
+  for (let i = 1; i < n; i++) {
+    const gap = nodes[i].rawY - nodes[i-1].rawY;
+    nodes[i].side = gap < CLOSE_EX ? (nodes[i-1].side === 'right' ? 'left' : 'right') : 'right';
   }
+  const MIN_EX = 24, floorEx = SVG_H - AX_PB - 6;
+  ['right', 'left'].forEach(side => {
+    const g = nodes.filter(nd => nd.side === side);
+    for (let i = 1; i < g.length; i++)
+      if (g[i].y - g[i-1].y < MIN_EX) g[i].y = g[i-1].y + MIN_EX;
+    for (let i = g.length - 1; i >= 0; i--) {
+      if (g[i].y > floorEx) g[i].y = floorEx;
+      if (i > 0 && g[i-1].y > g[i].y - MIN_EX) g[i-1].y = g[i].y - MIN_EX;
+    }
+  });
 
   const podC = i => i===0?'#FBBF24':i===1?'#8AAFC4':i===2?'#CD7C42':'#6B7280';
-  const gC   = g => g>0?'#4ADE80':g<0?'#F87171':'#475569';
-  const gT   = g => g>0?`+${nf(g)}`:g<0?nf(g):'—';
   const todayStr = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
   const AF = 'font-family="Arial,Helvetica,sans-serif"';
   const IF = 'font-family="Impact,Arial Black,sans-serif"';
@@ -510,50 +478,45 @@ function buildExportSVG(series, liveDataAvailable) {
   }).join('');
 
   const axHdr = `
-    <text x="${AX_X+27}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">RG</text>
-    <text x="${AX_X+52}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">JOUEUR</text>
-    <text x="${AX_X+302}" y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">POINTS</text>`;
+    <text x="${AX_X+14}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">RG</text>
+    <text x="${AX_X+40}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">JOUEUR</text>
+    <text x="${AX_X+268}" y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">POINTS</text>`;
 
-  const spine = `<line x1="${AX_X}" y1="${AX_PT-8}" x2="${AX_X}" y2="${SVG_H-AX_PB+8}" stroke="rgba(148,163,184,.2)" stroke-width="1.5"/>`;
-  const scaleMk = `
-    <text x="${AX_X-10}" y="${AX_PT-2}" text-anchor="end" ${AF} font-size="9" fill="#334155" font-weight="bold">${nf(maxPts)}</text>
-    <text x="${AX_X-10}" y="${SVG_H-AX_PB+12}" text-anchor="end" ${AF} font-size="9" fill="#334155" font-weight="bold">${nf(minPts)}</text>
-    <line x1="${AX_X-5}" y1="${AX_PT}" x2="${AX_X}" y2="${AX_PT}" stroke="rgba(148,163,184,.25)" stroke-width="1"/>
-    <line x1="${AX_X-5}" y1="${SVG_H-AX_PB}" x2="${AX_X}" y2="${SVG_H-AX_PB}" stroke="rgba(148,163,184,.25)" stroke-width="1"/>`;
+  const spine = `
+    <line x1="${AX_X}" y1="${AX_PT-10}" x2="${AX_X}" y2="${SVG_H-AX_PB+10}" stroke="rgba(148,163,184,.2)" stroke-width="1.5"/>
+    <line x1="${AX_X-4}" y1="${AX_PT}" x2="${AX_X+4}" y2="${AX_PT}" stroke="rgba(148,163,184,.28)" stroke-width="1"/>
+    <line x1="${AX_X-4}" y1="${SVG_H-AX_PB}" x2="${AX_X+4}" y2="${SVG_H-AX_PB}" stroke="rgba(148,163,184,.28)" stroke-width="1"/>
+    <text x="${AX_X}" y="${AX_PT-14}" text-anchor="middle" ${AF} font-size="8" fill="#2D3F55" font-weight="bold">${nf(maxPts)} pts</text>
+    <text x="${AX_X}" y="${SVG_H-AX_PB+20}" text-anchor="middle" ${AF} font-size="8" fill="#2D3F55" font-weight="bold">${nf(minPts)} pts</text>`;
+  const scaleMk = '';
 
-  const gapsSvg = nodes.slice(0,-1).map((nd,i) => {
-    const nx = nodes[i+1];
-    const gap = nd.pts - nx.pts;
-    if (gap <= 0) return '';
-    const midY = (nd.rawY + nx.rawY) / 2;
-    const bx = AX_X - 13;
-    return `
-      <line x1="${bx}" y1="${nd.rawY+6}" x2="${bx}" y2="${nx.rawY-6}" stroke="rgba(148,163,184,.12)" stroke-width="1"/>
-      <line x1="${bx}" y1="${nd.rawY+6}" x2="${bx+5}" y2="${nd.rawY+6}" stroke="rgba(148,163,184,.12)" stroke-width="1"/>
-      <line x1="${bx}" y1="${nx.rawY-6}" x2="${bx+5}" y2="${nx.rawY-6}" stroke="rgba(148,163,184,.12)" stroke-width="1"/>
-      <text x="${bx-4}" y="${midY+4}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">−${nf(gap)}</text>`;
-  }).join('');
 
-  const playersSvg = nodes.map(({s,idx,color,pts,gain,rawY,y}) => {
-    const conn = Math.abs(y-rawY)>5
-      ? `<line x1="${AX_X+7}" y1="${rawY}" x2="${AX_X+22}" y2="${y}" stroke="${color}" stroke-width="1" stroke-opacity=".25" stroke-dasharray="2 3"/>`
-      : '';
-    const nm = s.pseudo.length>15 ? s.pseudo.slice(0,14)+'…' : s.pseudo;
+  const playersSvg = nodes.map(({s,idx,color,pts,rawY,y,side}) => {
+    const nm = s.pseudo.length>14 ? s.pseudo.slice(0,13)+'…' : s.pseudo;
+    const pc = podC(idx);
+    const conn = side === 'right'
+      ? `<line x1="${AX_X+5}" y1="${rawY}" x2="${AX_X+13}" y2="${y}" stroke="${color}" stroke-width="1" stroke-opacity=".4"/>`
+      : `<line x1="${AX_X-5}" y1="${rawY}" x2="${AX_X-13}" y2="${y}" stroke="${color}" stroke-width="1" stroke-opacity=".4"/>`;
+    if (side === 'right') return `
+      <circle cx="${AX_X}" cy="${rawY}" r="5.5" fill="${color}" stroke="#0C1320" stroke-width="2.5"/>
+      ${conn}
+      <text x="${AX_X+14}" y="${y+4}" ${IF} font-size="11" fill="${pc}">#${idx+1}</text>
+      <text x="${AX_X+40}" y="${y+4}" ${AF} font-size="12" fill="#CBD5E1" font-weight="bold">${esc2(nm)}</text>
+      <text x="${AX_X+268}" y="${y+5}" text-anchor="end" ${IF} font-size="16" fill="#F1F5F9">${nf(pts)}</text>
+      <text x="${AX_X+272}" y="${y+4}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">pts</text>`;
     return `
       <circle cx="${AX_X}" cy="${rawY}" r="5.5" fill="${color}" stroke="#0C1320" stroke-width="2.5"/>
       ${conn}
-      <line x1="${AX_X+9}" y1="${y}" x2="${AX_X+22}" y2="${y}" stroke="${color}" stroke-width="1.5" stroke-opacity=".6"/>
-      <text x="${AX_X+27}" y="${y+4}" ${IF} font-size="11" fill="${podC(idx)}">#${idx+1}</text>
-      <text x="${AX_X+52}" y="${y+4}" ${AF} font-size="12" fill="#CBD5E1" font-weight="bold">${esc2(nm)}</text>
-      <text x="${AX_X+302}" y="${y+5}" text-anchor="end" ${IF} font-size="16" fill="#F1F5F9">${nf(pts)}</text>
-      <text x="${AX_X+308}" y="${y+4}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">pts</text>`;
+      <text x="${AX_X-14}" y="${y+4}" text-anchor="end" ${IF} font-size="11" fill="${pc}">#${idx+1}</text>
+      <text x="${AX_X-40}" y="${y+4}" text-anchor="end" ${AF} font-size="12" fill="#CBD5E1" font-weight="bold">${esc2(nm)}</text>
+      <text x="${AX_X-160}" y="${y+5}" text-anchor="end" ${IF} font-size="16" fill="#F1F5F9">${nf(pts)}</text>`;
   }).join('');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${SW}" height="${SVG_H}" viewBox="0 0 ${SW} ${SVG_H}">
   ${bg}${hdr}${divLine}
   ${tHdr}${tRows}
-  ${axHdr}${spine}${scaleMk}${gapsSvg}${playersSvg}
+  ${axHdr}${spine}${scaleMk}${playersSvg}
 </svg>`;
 }
 
