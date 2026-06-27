@@ -24,6 +24,13 @@
       <span id="live-badge" style="display:none;align-items:center;gap:6px;font-size:11px;color:#475569;font-weight:700">
         <span style="width:6px;height:6px;border-radius:50%;background:#22C55E;box-shadow:0 0 0 3px rgba(34,197,94,.2)"></span>LIVE
       </span>
+      <button id="export-btn" hidden onclick="downloadExport()"
+        style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;border:1px solid rgba(148,163,184,.13);background:rgba(255,255,255,.04);color:#64748B;font:700 11px Manrope,sans-serif;cursor:pointer;text-transform:uppercase;letter-spacing:.08em"
+        onmouseover="this.style.background='rgba(255,255,255,.08)';this.style.color='#F1F5F9'"
+        onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.color='#64748B'">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3 6l3 3 3-3M1 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Export PNG
+      </button>
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.08em">
         Période
         <select id="range-select" style="border-radius:8px;padding:5px 9px;font-size:12px;font-family:'Manrope',sans-serif;cursor:pointer;outline:none;border:1px solid rgba(148,163,184,.12);color:#F1F5F9;background:#1A2335">
@@ -394,6 +401,7 @@ function render(data) {
   document.getElementById('diff-mode-label').textContent = data.liveDataAvailable
     ? '⚡ Δ vs classement actuel' : '⏱ Δ sur la période';
   if (data.liveDataAvailable) document.getElementById('live-badge').style.display = 'flex';
+  document.getElementById('export-btn').hidden = false;
 
   const empty = data.snapshotCount === 0 || data.series.length === 0;
   document.getElementById('empty-state').hidden = !empty;
@@ -416,6 +424,170 @@ async function loadHistory() {
     document.getElementById('empty-state').hidden = false;
     document.getElementById('empty-state').querySelector('p').textContent = err.message;
   }
+}
+
+// ── Export PNG ───────────────────────────────────────────────────────────
+function buildExportSVG(series, liveDataAvailable) {
+  const esc2 = v => String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  const nf = v => numFmt.format(v);
+  const bySCM = [...series].sort((a,b) => a.currentEscmRank - b.currentEscmRank);
+  const byPts = [...series].sort((a,b) => b.currentPoints - a.currentPoints);
+  const n = bySCM.length;
+
+  // Layout
+  const SW = 1120, HDR = 58, ROW = 38;
+  const SVG_H = HDR + 40 + n * ROW + 44;
+
+  // Table columns (absolute x)
+  const TX = 16, TY = HDR + 20, TR_Y0 = TY + 26;
+  const C_RG = TX+44, C_ES = TX+80, C_NAME = TX+92;
+  const C_BONS = TX+328, C_EXAC = TX+378, C_PTS = TX+450;
+
+  // Vertical axis (right panel)
+  const AX_X = 590;          // axis spine x
+  const AX_PT = HDR + 40;    // top dot y
+  const AX_PB = 28;
+  const AX_H = SVG_H - AX_PT - AX_PB;
+
+  const maxPts = byPts[0].currentPoints;
+  const minPts = byPts[byPts.length-1].currentPoints;
+  const range  = Math.max(maxPts - minPts, 1);
+  const yOf    = pts => AX_PT + (1 - (pts - minPts) / range) * AX_H;
+
+  const nodes = byPts.map((s, idx) => ({
+    s, idx,
+    color: COLORS[idx % COLORS.length],
+    pts: s.currentPoints,
+    gain: liveDataAvailable ? s.pointsChange : 0,
+    rawY: yOf(s.currentPoints),
+    y:    yOf(s.currentPoints),
+  }));
+
+  const MIN_GAP = 36;
+  for (let i = 1; i < nodes.length; i++)
+    if (nodes[i].y - nodes[i-1].y < MIN_GAP) nodes[i].y = nodes[i-1].y + MIN_GAP;
+  const floorY = SVG_H - AX_PB - 6;
+  for (let i = nodes.length-1; i >= 0; i--) {
+    if (nodes[i].y > floorY) nodes[i].y = floorY;
+    if (i > 0 && nodes[i-1].y > nodes[i].y - MIN_GAP) nodes[i-1].y = nodes[i].y - MIN_GAP;
+  }
+
+  const podC = i => i===0?'#FBBF24':i===1?'#8AAFC4':i===2?'#CD7C42':'#6B7280';
+  const gC   = g => g>0?'#4ADE80':g<0?'#F87171':'#475569';
+  const gT   = g => g>0?`+${nf(g)}`:g<0?nf(g):'—';
+  const todayStr = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  const AF = 'font-family="Arial,Helvetica,sans-serif"';
+  const IF = 'font-family="Impact,Arial Black,sans-serif"';
+
+  const bg  = `<rect width="${SW}" height="${SVG_H}" fill="#0C1320"/>`;
+  const hdr = `
+    <rect width="${SW}" height="${HDR}" fill="#111827"/>
+    <rect x="0" y="${HDR}" width="${SW}" height="1" fill="rgba(148,163,184,.09)"/>
+    <rect x="12" y="13" width="32" height="32" rx="9" fill="rgba(34,197,94,.12)" stroke="rgba(34,197,94,.28)" stroke-width="1"/>
+    <text x="28" y="33" text-anchor="middle" font-size="15" ${AF} fill="#22C55E">&#x26BD;</text>
+    <text x="52" y="37" ${IF} font-size="21" fill="#F1F5F9">MPP<tspan fill="#22C55E">TRACK</tspan><tspan fill="#475569"> · </tspan><tspan fill="#9333EA">e-SCM</tspan></text>
+    <text x="${SW-12}" y="28" text-anchor="end" ${AF} font-size="10" fill="#475569" font-weight="bold">${esc2(todayStr)}</text>
+    <text x="${SW-12}" y="44" text-anchor="end" ${AF} font-size="10" fill="#475569" font-weight="bold">${n} membres</text>`;
+
+  const divLine = `<line x1="488" y1="${HDR+10}" x2="488" y2="${SVG_H-10}" stroke="rgba(148,163,184,.08)" stroke-width="1"/>`;
+
+  const tHdr = `
+    <text x="${C_RG}"   y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">#LIG</text>
+    <text x="${C_ES}"   y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">#ES</text>
+    <text x="${C_NAME}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">JOUEUR</text>
+    <text x="${C_BONS}" y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">BONS</text>
+    <text x="${C_EXAC}" y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">EXACTS</text>
+    <text x="${C_PTS}"  y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">PTS</text>`;
+
+  const tRows = bySCM.map((s, i) => {
+    const cy = TR_Y0 + i * ROW;
+    const rb = i%2===0?'rgba(255,255,255,.018)':'transparent';
+    const nm = s.pseudo.length>18 ? s.pseudo.slice(0,17)+'…' : s.pseudo;
+    return `
+      <rect x="${TX}" y="${cy-14}" width="${C_PTS-TX+18}" height="${ROW-2}" rx="4" fill="${rb}"/>
+      <text x="${C_RG}"   y="${cy+4}" text-anchor="end" ${IF} font-size="14" fill="#475569">${s.currentGlobalRank}</text>
+      <text x="${C_ES}"   y="${cy+4}" text-anchor="end" ${IF} font-size="14" fill="${podC(i)}">${s.currentEscmRank}</text>
+      <text x="${C_NAME}" y="${cy+4}" ${AF} font-size="13" fill="#CBD5E1" font-weight="bold">${esc2(nm)}</text>
+      <text x="${C_BONS}" y="${cy+4}" text-anchor="end" ${AF} font-size="13" fill="#94A3B8">${s.goodResults}</text>
+      <text x="${C_EXAC}" y="${cy+4}" text-anchor="end" ${AF} font-size="13" fill="#94A3B8">${s.exactScores}</text>
+      <text x="${C_PTS}"  y="${cy+4}" text-anchor="end" ${IF} font-size="17" fill="${podC(i)}">${nf(s.currentPoints)}</text>`;
+  }).join('');
+
+  const axHdr = `
+    <text x="${AX_X+27}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">RG</text>
+    <text x="${AX_X+52}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">JOUEUR</text>
+    <text x="${AX_X+302}" y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">POINTS</text>
+    <text x="${AX_X+345}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">${liveDataAvailable?'Δ ACTUEL':'Δ PÉRIODE'}</text>`;
+
+  const spine = `<line x1="${AX_X}" y1="${AX_PT-8}" x2="${AX_X}" y2="${SVG_H-AX_PB+8}" stroke="rgba(148,163,184,.2)" stroke-width="1.5"/>`;
+  const scaleMk = `
+    <text x="${AX_X-10}" y="${AX_PT-2}" text-anchor="end" ${AF} font-size="9" fill="#334155" font-weight="bold">${nf(maxPts)}</text>
+    <text x="${AX_X-10}" y="${SVG_H-AX_PB+12}" text-anchor="end" ${AF} font-size="9" fill="#334155" font-weight="bold">${nf(minPts)}</text>
+    <line x1="${AX_X-5}" y1="${AX_PT}" x2="${AX_X}" y2="${AX_PT}" stroke="rgba(148,163,184,.25)" stroke-width="1"/>
+    <line x1="${AX_X-5}" y1="${SVG_H-AX_PB}" x2="${AX_X}" y2="${SVG_H-AX_PB}" stroke="rgba(148,163,184,.25)" stroke-width="1"/>`;
+
+  const gapsSvg = nodes.slice(0,-1).map((nd,i) => {
+    const nx = nodes[i+1];
+    const gap = nd.pts - nx.pts;
+    if (gap <= 0) return '';
+    const midY = (nd.rawY + nx.rawY) / 2;
+    const bx = AX_X - 13;
+    return `
+      <line x1="${bx}" y1="${nd.rawY+6}" x2="${bx}" y2="${nx.rawY-6}" stroke="rgba(148,163,184,.12)" stroke-width="1"/>
+      <line x1="${bx}" y1="${nd.rawY+6}" x2="${bx+5}" y2="${nd.rawY+6}" stroke="rgba(148,163,184,.12)" stroke-width="1"/>
+      <line x1="${bx}" y1="${nx.rawY-6}" x2="${bx+5}" y2="${nx.rawY-6}" stroke="rgba(148,163,184,.12)" stroke-width="1"/>
+      <text x="${bx-4}" y="${midY+4}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">−${nf(gap)}</text>`;
+  }).join('');
+
+  const playersSvg = nodes.map(({s,idx,color,pts,gain,rawY,y}) => {
+    const conn = Math.abs(y-rawY)>5
+      ? `<line x1="${AX_X+7}" y1="${rawY}" x2="${AX_X+22}" y2="${y}" stroke="${color}" stroke-width="1" stroke-opacity=".25" stroke-dasharray="2 3"/>`
+      : '';
+    const nm = s.pseudo.length>15 ? s.pseudo.slice(0,14)+'…' : s.pseudo;
+    return `
+      <circle cx="${AX_X}" cy="${rawY}" r="5.5" fill="${color}" stroke="#0C1320" stroke-width="2.5"/>
+      ${conn}
+      <line x1="${AX_X+9}" y1="${y}" x2="${AX_X+22}" y2="${y}" stroke="${color}" stroke-width="1.5" stroke-opacity=".6"/>
+      <text x="${AX_X+27}" y="${y+4}" ${IF} font-size="11" fill="${podC(idx)}">#${idx+1}</text>
+      <text x="${AX_X+52}" y="${y+4}" ${AF} font-size="12" fill="#CBD5E1" font-weight="bold">${esc2(nm)}</text>
+      <text x="${AX_X+302}" y="${y+5}" text-anchor="end" ${IF} font-size="16" fill="#F1F5F9">${nf(pts)}</text>
+      <text x="${AX_X+308}" y="${y+4}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">pts</text>
+      <text x="${AX_X+345}" y="${y+4}" ${AF} font-size="11" fill="${gC(gain)}" font-weight="bold">${gT(gain)}</text>`;
+  }).join('');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${SW}" height="${SVG_H}" viewBox="0 0 ${SW} ${SVG_H}">
+  ${bg}${hdr}${divLine}
+  ${tHdr}${tRows}
+  ${axHdr}${spine}${scaleMk}${gapsSvg}${playersSvg}
+</svg>`;
+}
+
+async function downloadExport() {
+  if (!currentData || !currentData.series.length) return;
+  const btn = document.getElementById('export-btn');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳';
+  btn.disabled = true;
+  try {
+    const svgStr = buildExportSVG(currentData.series, currentData.liveDataAvailable);
+    const m = svgStr.match(/width="(\d+)" height="(\d+)"/);
+    const svgW = m ? +m[1] : 1120, svgH = m ? +m[2] : 600;
+    const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+    const img = await new Promise((res,rej) => { const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=svgUrl; });
+    const sc = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = svgW * sc; canvas.height = svgH * sc;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(sc, sc);
+    ctx.drawImage(img, 0, 0, svgW, svgH);
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `escm-${new Date().toISOString().slice(0,10)}.png`; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { console.error('Export PNG:', e); }
+  finally { btn.innerHTML = orig; btn.disabled = false; }
 }
 
 // ── Mode switch ──────────────────────────────────────────────────────────

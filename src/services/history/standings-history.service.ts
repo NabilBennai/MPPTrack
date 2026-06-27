@@ -188,6 +188,9 @@ export interface PlayerPositionSeries {
   currentGlobalRank: number;
   currentEscmRank: number;
   currentPoints: number;
+  goodResults: number;
+  exactScores: number;
+  playedPredictions: number;
   lastSnapshotGlobalRank: number;
   lastSnapshotEscmRank: number;
   lastSnapshotPoints: number;
@@ -292,6 +295,9 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
         currentGlobalRank: point.globalRank,
         currentEscmRank: point.escmRank,
         currentPoints: point.points,
+        goodResults: 0,
+        exactScores: 0,
+        playedPredictions: 0,
         lastSnapshotGlobalRank: point.globalRank,
         lastSnapshotEscmRank: point.escmRank,
         lastSnapshotPoints: point.points,
@@ -308,6 +314,9 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
   const liveGlobalMap = new Map<string, number>();
   const liveEscmMap   = new Map<string, number>();
   const livePointsMap = new Map<string, number>();
+  const liveGoodMap   = new Map<string, number>();
+  const liveExactMap  = new Map<string, number>();
+  const livePlayedMap = new Map<string, number>();
   let liveDataAvailable = false;
   try {
     const live = await getMppClassement();
@@ -316,6 +325,9 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
       liveGlobalMap.set(p.id, p.rank);
       liveEscmMap.set(p.id, i + 1);
       livePointsMap.set(p.id, p.points);
+      liveGoodMap.set(p.id, p.goodResults ?? 0);
+      liveExactMap.set(p.id, p.exactScores ?? 0);
+      livePlayedMap.set(p.id, p.playedPredictions ?? 0);
     });
     liveDataAvailable = esLive.length > 0;
   } catch {
@@ -342,6 +354,9 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
         s.pointsChange   = liveP - last.points;
         s.currentPoints  = liveP;
       }
+      s.goodResults        = liveGoodMap.get(s.playerId)   ?? 0;
+      s.exactScores        = liveExactMap.get(s.playerId)  ?? 0;
+      s.playedPredictions  = livePlayedMap.get(s.playerId) ?? 0;
     } else {
       // fall back: diff over the selected period (first snapshot → last snapshot)
       const first = s.positions[0]!;
