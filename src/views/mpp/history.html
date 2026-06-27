@@ -201,18 +201,14 @@ function renderPointsBoard(series, liveDataAvailable) {
       <text x="${axisX + 310}" y="${y + 5}" fill="#F1F5F9"
         font-size="16" font-family="Oswald,sans-serif" font-weight="700" text-anchor="end">${numFmt.format(pts)}</text>
       <text x="${axisX + 315}" y="${y + 4}" fill="#2D3F55"
-        font-size="9" font-family="Manrope,sans-serif" font-weight="700">pts</text>
-      <text x="${axisX + 350}" y="${y + 4}" fill="${gColor(gain)}"
-        font-size="11" font-family="Manrope,sans-serif" font-weight="800">${gText(gain)}</text>`;
+        font-size="9" font-family="Manrope,sans-serif" font-weight="700">pts</text>`;
   }).join('');
 
   // ── Column headers ──
-  const deltaLbl = liveDataAvailable ? 'Δ actuel' : 'Δ période';
   const headers = `
     <text x="${axisX + 27}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800" letter-spacing=".08em">RG</text>
     <text x="${axisX + 52}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800" letter-spacing=".08em">JOUEUR</text>
-    <text x="${axisX + 310}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800" text-anchor="end">POINTS</text>
-    <text x="${axisX + 350}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800">${deltaLbl.toUpperCase()}</text>`;
+    <text x="${axisX + 310}" y="22" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" font-weight="800" text-anchor="end">POINTS</text>`;
 
   const svg = `<svg viewBox="0 0 ${W} ${H}" style="display:block;width:100%;height:auto;overflow:visible"
       role="img" aria-label="Classement par points e-SCM">
@@ -516,8 +512,7 @@ function buildExportSVG(series, liveDataAvailable) {
   const axHdr = `
     <text x="${AX_X+27}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">RG</text>
     <text x="${AX_X+52}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">JOUEUR</text>
-    <text x="${AX_X+302}" y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">POINTS</text>
-    <text x="${AX_X+345}" y="${TY}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">${liveDataAvailable?'Δ ACTUEL':'Δ PÉRIODE'}</text>`;
+    <text x="${AX_X+302}" y="${TY}" text-anchor="end" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">POINTS</text>`;
 
   const spine = `<line x1="${AX_X}" y1="${AX_PT-8}" x2="${AX_X}" y2="${SVG_H-AX_PB+8}" stroke="rgba(148,163,184,.2)" stroke-width="1.5"/>`;
   const scaleMk = `
@@ -551,8 +546,7 @@ function buildExportSVG(series, liveDataAvailable) {
       <text x="${AX_X+27}" y="${y+4}" ${IF} font-size="11" fill="${podC(idx)}">#${idx+1}</text>
       <text x="${AX_X+52}" y="${y+4}" ${AF} font-size="12" fill="#CBD5E1" font-weight="bold">${esc2(nm)}</text>
       <text x="${AX_X+302}" y="${y+5}" text-anchor="end" ${IF} font-size="16" fill="#F1F5F9">${nf(pts)}</text>
-      <text x="${AX_X+308}" y="${y+4}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">pts</text>
-      <text x="${AX_X+345}" y="${y+4}" ${AF} font-size="11" fill="${gC(gain)}" font-weight="bold">${gT(gain)}</text>`;
+      <text x="${AX_X+308}" y="${y+4}" ${AF} font-size="9" fill="#2D3F55" font-weight="bold">pts</text>`;
   }).join('');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
