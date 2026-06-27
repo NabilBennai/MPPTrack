@@ -328,3 +328,130 @@ textarea:focus-visible,
 
 .movement.up { color:#52e6ad; }
 .movement.down { color:#ff87ad; }
+
+/* ─── ERP football theme override ──────────────────────────────────────── */
+:root {
+  --bg:#f3f6ef;
+  --surface:#ffffff;
+  --raised:#f8fbf4;
+  --border:rgba(34,82,47,.14);
+  --border-hi:rgba(34,82,47,.24);
+  --t1:#17251b;
+  --t2:#53665a;
+  --t3:#7a8f80;
+  --accent:#1f7a3b;
+  --accent-dim:rgba(31,122,59,.10);
+  --accent-hi:rgba(31,122,59,.22);
+  --gold:#d6a51d;
+  --silver:#8d9ba4;
+  --bronze:#b66a35;
+}
+
+body {
+  color-scheme:light;
+  background:linear-gradient(180deg,#eef5e8 0%,#f7f8f1 42%,#edf3e8 100%) !important;
+  color:var(--t1) !important;
+}
+
+body::before,
+body::after { display:none; }
+
+header,
+#table-scroll-wrap,
+#pagination-bar,
+.table-head,
+.stat-card,
+#me-wrap,
+#toast,
+#kb-overlay > div,
+.history-panel,
+.history-metric,
+.history-chart-shell {
+  background:#fff !important;
+  border-color:rgba(34,82,47,.16) !important;
+  box-shadow:0 8px 24px rgba(38,76,50,.08) !important;
+  backdrop-filter:none !important;
+}
+
+header { border-bottom:1px solid rgba(31,122,59,.18) !important; }
+main { background:transparent !important; }
+
+.font-oswald,
+body [style*="color:#ede9ff"],
+body [style*="color: #ede9ff"],
+body [style*="color:#fff"],
+body [style*="color: #fff"] { color:#17251b !important; }
+
+body [style*="color:#7c6bf8"],
+body [style*="color:#a99bff"],
+body [style*="color:#10d48a"],
+body [style*="color: #7c6bf8"],
+body [style*="color: #a99bff"],
+body [style*="color: #10d48a"] { color:#1f7a3b !important; }
+
+body [style*="color:#5c5578"],
+body [style*="color:#2e2850"],
+body [style*="color:#39324f"],
+body [style*="color:#243040"],
+body [style*="color:#4e6278"],
+body [style*="color:#aaa2c4"],
+body [style*="color: #5c5578"],
+body [style*="color: #2e2850"],
+body [style*="color: #39324f"],
+body [style*="color: #243040"],
+body [style*="color: #4e6278"],
+body [style*="color: #aaa2c4"] { color:#53665a !important; }
+
+input,
+select,
+textarea {
+  background:#fff !important;
+  color:#17251b !important;
+  border-color:rgba(34,82,47,.22) !important;
+  box-shadow:inset 0 1px 2px rgba(38,76,50,.05) !important;
+}
+
+::placeholder { color:#7a8f80 !important; }
+
+button,
+a[href] { box-shadow:none !important; }
+
+.dept-tab,
+button[title],
+#btn-refresh,
+#btn-me-toggle {
+  background:#f8fbf4 !important;
+  color:#244f31 !important;
+  border-color:rgba(31,122,59,.22) !important;
+}
+
+.dept-tab:hover,
+button[title]:hover,
+#btn-refresh:hover,
+#btn-me-toggle:hover {
+  background:#edf7e8 !important;
+  color:#145c2b !important;
+  border-color:rgba(31,122,59,.38) !important;
+}
+
+.dept-tab[data-active],
+.stat-card[data-active] {
+  background:linear-gradient(180deg,#e4f4dd,#f4fbef) !important;
+  border-color:rgba(31,122,59,.42) !important;
+}
+
+.player-row { background:#fff !important; }
+.player-row:hover { background:#f4faef !important; }
+.player-row[data-me="1"] { background:#e8f6de !important; }
+.player-row[data-focused="1"] { outline:2px solid rgba(31,122,59,.45); outline-offset:-2px; }
+
+.table-head th,
+.history-table th {
+  background:#f0f6ea !important;
+  color:#53665a !important;
+  border-bottom:1px solid rgba(34,82,47,.16) !important;
+}
+
+.shimmer {
+  background:linear-gradient(90deg,#e7eee0 0%,#f7fbf3 50%,#e7eee0 100%) !important;
+}

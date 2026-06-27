@@ -116,8 +116,32 @@ function extractStandings(raw: unknown): MppRawStandingEntry[] {
   return [];
 }
 
-async function fetchRawStandings(contestId: string): Promise<MppRawStandingEntry[]> {
-  const limit = parseInt(process.env["MPP_STANDINGS_LIMIT"] ?? "200", 10);
+function getConfiguredStandingsLimit(totalUsers?: number): number {
+  const configured = Number.parseInt(process.env["MPP_STANDINGS_LIMIT"] ?? "", 10);
+  if (Number.isFinite(configured) && configured > 0) return configured;
+
+  // The old default of 200 silently truncated leagues with more members.
+  // When the contest card exposes the league size, request enough rows for it;
+  // otherwise use a generous default that still stays bounded.
+  return Math.max(totalUsers ?? 0, 1000);
+}
+
+async function getContestTotalUsers(contestId: string): Promise<number | undefined> {
+  try {
+    const data = await getUserContests();
+    const all: MppContestCard[] = [
+      ...(data.contestsCards ?? []),
+      ...(data.pinnedChallengesCards ?? []),
+    ];
+    const card = all.find((c) => c.contestId === contestId);
+    return card?.totalUsers;
+  } catch {
+    return undefined;
+  }
+}
+
+async function fetchRawStandings(contestId: string, totalUsers?: number): Promise<MppRawStandingEntry[]> {
+  const limit = getConfiguredStandingsLimit(totalUsers);
   const raw = await requestMpp<unknown>(
     `/challenge-standings/top-users-standings?challengeId=${encodeURIComponent(contestId)}&limit=${limit}`
   );
@@ -173,7 +197,8 @@ export async function getMppClassement(): Promise<MppPlayer[]> {
     return MOCK_PLAYERS;
   }
 
-  const entries = await fetchRawStandings(contestId);
+  const totalUsers = await getContestTotalUsers(contestId);
+  const entries = await fetchRawStandings(contestId, totalUsers);
   if (entries.length === 0) {
     console.warn(`[MPP] Classement vide pour ${contestId}. Fallback mock.`);
     return MOCK_PLAYERS;
@@ -259,7 +284,8 @@ export interface ProbeResult {
 
 export async function probeRankingEndpoints(challengeId: string): Promise<ProbeResult[]> {
   const results: ProbeResult[] = [];
-  const path = `/challenge-standings/top-users-standings?challengeId=${encodeURIComponent(challengeId)}&limit=200`;
+  const limit = getConfiguredStandingsLimit(await getContestTotalUsers(challengeId));
+  const path = `/challenge-standings/top-users-standings?challengeId=${encodeURIComponent(challengeId)}&limit=${limit}`;
   try {
     const data = await requestMpp<unknown>(path);
     const entries = extractStandings(data);
