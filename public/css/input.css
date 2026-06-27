@@ -442,25 +442,10 @@ input, select, textarea {
 .history-empty p  { max-width: 520px; margin: 8px auto 18px; color: var(--t2); font-size: 13px; }
 .history-empty code { color: var(--pitch); font-size: 11px; }
 
-/* ─── Responsive ─────────────────────────────────────────────── */
+/* ─── History responsive ─────────────────────────────────────── */
 @media (max-width: 900px) {
-  .history-metrics   { grid-template-columns: repeat(2,1fr); }
-  .history-dashboard { grid-template-columns: 1fr; }
-  .history-panel-wide:last-child { grid-column: auto; }
+  .history-grid { grid-template-columns: 1fr !important; }
 }
 @media (max-width: 640px) {
-  .history-header { padding: 10px 16px; flex-wrap: wrap; gap: 8px 14px; }
-  .history-nav    { order: 3; width: 100%; }
-  .history-range span { display: none; }
-  .history-main   { padding: 24px 16px 48px; }
-  .history-hero   { align-items: flex-start; flex-direction: column; }
-  .escm-banner    { align-items: flex-start; flex-wrap: wrap; }
-  .escm-banner p  { width: 100%; margin: 2px 0 0 51px; }
-  .history-metrics { grid-template-columns: 1fr 1fr; }
-  .history-metric  { min-height: 100px; padding: 14px; }
-  .history-metric strong { font-size: 22px; }
-  .history-panel   { padding: 14px; }
-  .history-panel-heading { flex-direction: column; }
-  .history-legend  { max-width: 100%; justify-content: flex-start; }
-  .history-chart   { min-height: 270px; }
+  #metric-grid { grid-template-columns: repeat(2,1fr) !important; }
 }

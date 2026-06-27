@@ -178,8 +178,11 @@ export interface PlayerPositionSeries {
   pseudo: string;
   currentGlobalRank: number;
   currentEscmRank: number;
+  lastSnapshotGlobalRank: number;
+  lastSnapshotEscmRank: number;
   globalRankChange: number;
   escmRankChange: number;
+  liveDataAvailable: boolean;
   positions: PositionPoint[];
 }
 
@@ -191,6 +194,7 @@ export interface HistoryDashboardData {
   snapshotCount: number;
   playerCount: number;
   series: PlayerPositionSeries[];
+  liveDataAvailable: boolean;
 }
 
 function numberValue(value: unknown): number {
@@ -223,6 +227,7 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
       snapshotCount: 0,
       playerCount: 0,
       series: [],
+      liveDataAvailable: false,
     };
   }
 
@@ -261,20 +266,61 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
     const current = grouped.get(playerId);
     if (current) {
       current.positions.push(point);
+      current.lastSnapshotGlobalRank = point.globalRank;
+      current.lastSnapshotEscmRank = point.escmRank;
       current.currentGlobalRank = point.globalRank;
       current.currentEscmRank = point.escmRank;
-      current.globalRankChange = current.positions[0]!.globalRank - point.globalRank;
-      current.escmRankChange = current.positions[0]!.escmRank - point.escmRank;
     } else {
       grouped.set(playerId, {
         playerId,
         pseudo: String(row["pseudo"]),
         currentGlobalRank: point.globalRank,
         currentEscmRank: point.escmRank,
+        lastSnapshotGlobalRank: point.globalRank,
+        lastSnapshotEscmRank: point.escmRank,
         globalRankChange: 0,
         escmRankChange: 0,
+        liveDataAvailable: false,
         positions: [point],
       });
+    }
+  }
+
+  // Fetch live standings to compute diff: last snapshot → current live rank
+  const liveGlobalMap = new Map<string, number>();
+  const liveEscmMap = new Map<string, number>();
+  let liveDataAvailable = false;
+  try {
+    const live = await getMppClassement();
+    const esLive = live.filter((p) => p.departmentCode === "ES").sort((a, b) => a.rank - b.rank);
+    esLive.forEach((p, i) => {
+      liveGlobalMap.set(p.id, p.rank);
+      liveEscmMap.set(p.id, i + 1);
+    });
+    liveDataAvailable = esLive.length > 0;
+  } catch {
+    // silently fall back to snapshot-based diffs
+  }
+
+  const series = [...grouped.values()];
+  for (const s of series) {
+    const last = s.positions[s.positions.length - 1]!;
+    if (liveDataAvailable) {
+      const liveG = liveGlobalMap.get(s.playerId);
+      const liveE = liveEscmMap.get(s.playerId);
+      if (liveG !== undefined && liveE !== undefined) {
+        // positive change = improved (lower rank number is better)
+        s.globalRankChange = last.globalRank - liveG;
+        s.escmRankChange = last.escmRank - liveE;
+        s.currentGlobalRank = liveG;
+        s.currentEscmRank = liveE;
+        s.liveDataAvailable = true;
+      }
+    } else {
+      // fall back: diff over the selected period (first snapshot → last snapshot)
+      const first = s.positions[0]!;
+      s.globalRankChange = first.globalRank - last.globalRank;
+      s.escmRankChange = first.escmRank - last.escmRank;
     }
   }
 
@@ -285,6 +331,7 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
     lastCapturedAt: String(summary.rows[0]?.["last_captured_at"] ?? "") || null,
     snapshotCount,
     playerCount: numberValue(summary.rows[0]?.["player_count"]),
-    series: [...grouped.values()].sort((a, b) => a.currentEscmRank - b.currentEscmRank),
+    series: series.sort((a, b) => a.currentEscmRank - b.currentEscmRank),
+    liveDataAvailable,
   };
 }
