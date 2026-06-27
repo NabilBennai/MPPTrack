@@ -8,7 +8,6 @@
 </head>
 <body style="min-height:100dvh;background:#0C1320;color:#F1F5F9;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased">
 
-<!-- ── Header ──────────────────────────────────────────────────────────── -->
 <header style="position:sticky;top:0;z-index:20;background:#111827;border-bottom:1px solid rgba(148,163,184,.09)">
   <div class="px-5 sm:px-8" style="height:56px;display:flex;align-items:center;gap:16px">
     <a href="/" style="display:flex;align-items:center;gap:11px;text-decoration:none">
@@ -16,7 +15,7 @@
       <span class="font-oswald" style="font-size:20px;font-weight:700;letter-spacing:0.14em;color:#F1F5F9">MPP<span style="color:#22C55E">TRACK</span></span>
     </a>
     <nav style="display:flex;gap:3px;margin-left:4px">
-      <a href="/" style="padding:5px 10px;border-radius:7px;color:#475569;text-decoration:none;font-size:12px;font-weight:700;transition:color .12s,background .12s"
+      <a href="/" style="padding:5px 10px;border-radius:7px;color:#475569;text-decoration:none;font-size:12px;font-weight:700"
         onmouseover="this.style.color='#F1F5F9';this.style.background='rgba(255,255,255,.06)'"
         onmouseout="this.style.color='#475569';this.style.background='transparent'">Classement</a>
       <a href="/history" aria-current="page" style="padding:5px 10px;border-radius:7px;color:#F1F5F9;background:rgba(255,255,255,.06);text-decoration:none;font-size:12px;font-weight:700">Historique</a>
@@ -38,10 +37,8 @@
   </div>
 </header>
 
-<!-- ── Main ────────────────────────────────────────────────────────────── -->
 <main class="px-5 sm:px-8" style="max-width:1440px;margin:0 auto;padding-top:20px;padding-bottom:48px">
 
-  <!-- Info strip -->
   <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">
     <div style="display:flex;align-items:center;gap:8px;padding:5px 11px;border-radius:9px;background:rgba(147,51,234,.08);border:1px solid rgba(147,51,234,.2)">
       <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:#9333EA;color:#fff;font:700 10px 'Oswald',sans-serif">ES</span>
@@ -52,29 +49,35 @@
     <span id="diff-mode-label" style="margin-left:auto;font-size:10px;color:#334155;font-weight:700;text-transform:uppercase;letter-spacing:.08em"></span>
   </div>
 
-  <!-- Empty state -->
   <div id="empty-state" hidden style="padding:72px 24px;text-align:center;border:1px dashed rgba(148,163,184,.15);border-radius:16px;background:rgba(34,197,94,.03)">
     <div style="width:52px;height:52px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:#22C55E;background:rgba(34,197,94,.10);font-size:26px">⌁</div>
     <h2 class="font-oswald" style="font-size:24px;color:#F1F5F9;letter-spacing:.04em">CHRONOLOGIE VIDE</h2>
-    <p style="max-width:480px;margin:8px auto 16px;color:#64748B;font-size:13px">Aucun instantané enregistré pour cette période. Le premier apparaîtra après l'exécution du cron.</p>
+    <p style="max-width:480px;margin:8px auto 16px;color:#64748B;font-size:13px">Aucun instantané enregistré. Le premier apparaîtra après l'exécution du cron.</p>
     <code style="color:#22C55E;font-size:11px">GET /api/cron/snapshot</code>
   </div>
 
-  <!-- Chart panel (full width) -->
   <div id="dashboard" hidden style="border:1px solid rgba(148,163,184,.09);border-radius:16px;background:#111827;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.3)">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div>
-        <p style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#475569">Trajectoire e-SCM</p>
-        <h2 class="font-oswald" style="font-size:18px;letter-spacing:.04em;color:#F1F5F9;margin-top:3px">Évolution du classement</h2>
+        <p id="chart-eyebrow" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#475569">Trajectoire e-SCM</p>
+        <h2 id="chart-title" class="font-oswald" style="font-size:18px;letter-spacing:.04em;color:#F1F5F9;margin-top:3px">Évolution du classement</h2>
       </div>
       <div class="rank-mode-switch" role="group" style="display:flex;gap:3px;padding:3px;border:1px solid rgba(148,163,184,.09);border-radius:9px;background:#0C1320">
-        <button type="button" data-mode="global" data-active style="padding:5px 11px;border:0;border-radius:6px;font:700 11px 'Manrope',sans-serif;cursor:pointer;background:#9333EA;color:#fff;transition:background .12s,color .12s">Rang global</button>
-        <button type="button" data-mode="escm" style="padding:5px 11px;border:0;border-radius:6px;font:700 11px 'Manrope',sans-serif;cursor:pointer;background:transparent;color:#475569;transition:background .12s,color .12s">Rang e-SCM</button>
+        <button type="button" data-mode="global">Rang global</button>
+        <button type="button" data-mode="escm">Rang e-SCM</button>
+        <button type="button" data-mode="points">Points</button>
       </div>
     </div>
-    <div style="position:relative;border:1px solid rgba(147,51,234,.1);border-radius:12px;background:radial-gradient(ellipse at 50% -10%,rgba(147,51,234,.06),transparent 55%),#0C1320;overflow:hidden">
-      <div id="chart-tooltip" hidden style="position:absolute;z-index:4;min-width:180px;padding:10px 12px;border:1px solid rgba(147,51,234,.28);border-radius:10px;background:rgba(15,20,30,.97);box-shadow:0 12px 32px rgba(0,0,0,.6);pointer-events:none;backdrop-filter:blur(10px)"></div>
-      <div id="points-chart" style="width:100%;min-height:480px"></div>
+
+    <!-- Rank chart (SVG) -->
+    <div id="rank-chart-wrap" style="position:relative;border:1px solid rgba(147,51,234,.1);border-radius:12px;background:radial-gradient(ellipse at 50% -10%,rgba(147,51,234,.06),transparent 55%),#0C1320;overflow:hidden">
+      <div id="chart-tooltip" hidden style="position:absolute;z-index:4;min-width:190px;padding:10px 12px;border:1px solid rgba(147,51,234,.28);border-radius:10px;background:rgba(15,20,30,.97);box-shadow:0 12px 32px rgba(0,0,0,.6);pointer-events:none;backdrop-filter:blur(10px)"></div>
+      <div id="rank-chart" style="width:100%;min-height:480px"></div>
+    </div>
+
+    <!-- Points leaderboard (HTML, replaces chart in points mode) -->
+    <div id="points-board" hidden style="border:1px solid rgba(34,197,94,.1);border-radius:12px;background:#0C1320;overflow:hidden">
+      <div id="points-board-inner"></div>
     </div>
   </div>
 </main>
@@ -82,174 +85,230 @@
 <script>
 const COLORS = ['#A855F7','#22C55E','#3B9EFF','#FBBF24','#F97316','#06B6D4','#F43F5E','#8B5CF6'];
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris' });
+const numFmt  = new Intl.NumberFormat('fr-FR');
 const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 let rankMode = 'global';
 let currentData = null;
 
-function fmtDelta(n) {
-  if (n === 0) return '—';
-  return (n > 0 ? '▲' : '▼') + Math.abs(n);
-}
-function deltaColor(n) {
-  return n > 0 ? '#4ADE80' : n < 0 ? '#F87171' : '#475569';
+// ── Points leaderboard ───────────────────────────────────────────────────
+function renderPointsBoard(series, liveDataAvailable) {
+  const sorted = [...series].sort((a, b) => b.currentPoints - a.currentPoints);
+  const maxPts = sorted[0]?.currentPoints || 1;
+
+  // For "gains récents": points gained per last captured interval
+  // Use pointsChange if live, else diff between last two snapshots
+  const recentGain = s => {
+    if (liveDataAvailable) return s.pointsChange; // currentPoints - lastSnapshotPoints
+    const n = s.positions.length;
+    if (n < 2) return 0;
+    return s.positions[n-1].points - s.positions[n-2].points;
+  };
+  const gains    = sorted.map(recentGain);
+  const maxGain  = Math.max(...gains.filter(g => g > 0), 1);
+  const anyGain  = gains.some(g => g > 0);
+
+  const rankColor = i => i === 0 ? '#FBBF24' : i === 1 ? '#8AAFC4' : i === 2 ? '#CD7C42' : '#334155';
+  const rankSize  = i => i === 0 ? '22px' : i === 1 ? '20px' : i === 2 ? '18px' : '14px';
+
+  const rows = sorted.map((s, i) => {
+    const color   = COLORS[s.positions.length ? series.indexOf(s) % COLORS.length : i % COLORS.length];
+    const pct     = Math.max(2, Math.round(s.currentPoints / maxPts * 100));
+    const gain    = recentGain(s);
+    const gainPct = gain > 0 ? Math.max(4, Math.round(gain / maxGain * 100)) : 0;
+    const gainChip = gain > 0
+      ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:99px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);color:#4ADE80;font-size:10px;font-weight:800">+${numFmt.format(gain)}</span>`
+      : gain < 0
+        ? `<span style="padding:2px 8px;border-radius:99px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);color:#F87171;font-size:10px;font-weight:800">${numFmt.format(gain)}</span>`
+        : `<span style="color:#2D3F55;font-size:10px;font-weight:700">—</span>`;
+
+    // Period gain (first snapshot → last snapshot in the selected period)
+    const periodGain = s.positions.length >= 2
+      ? s.positions[s.positions.length-1].points - s.positions[0].points
+      : 0;
+    const periodChip = periodGain > 0
+      ? `<span style="color:#475569;font-size:10px;font-weight:600">+${numFmt.format(periodGain)} sur la période</span>`
+      : '';
+
+    return `<div style="display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:14px;padding:12px 20px;border-top:1px solid rgba(148,163,184,.06);transition:background .1s"
+        onmouseover="this.style.background='rgba(255,255,255,.03)'"
+        onmouseout="this.style.background='transparent'">
+
+      <!-- Rank -->
+      <div class="font-oswald" style="font-size:${rankSize(i)};font-weight:700;color:${rankColor(i)};line-height:1;text-align:center">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</div>
+
+      <!-- Name + bars -->
+      <div style="min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${color}"></span>
+          <span style="font-size:13px;font-weight:700;color:#F1F5F9;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(s.pseudo)}</span>
+          <span style="margin-left:4px">${gainChip}</span>
+          <span style="margin-left:2px">${periodChip}</span>
+        </div>
+        <!-- Points bar -->
+        <div style="height:8px;border-radius:4px;background:rgba(255,255,255,.05);overflow:hidden;position:relative">
+          <div style="position:absolute;inset:0;width:${pct}%;border-radius:4px;background:${color};opacity:.85;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
+        </div>
+        ${anyGain ? `<div style="height:4px;border-radius:2px;margin-top:3px;background:rgba(255,255,255,.03);overflow:hidden;position:relative">
+          <div style="position:absolute;inset:0;width:${gainPct}%;border-radius:2px;background:#22C55E;opacity:.7"></div>
+        </div>` : ''}
+      </div>
+
+      <!-- Points value -->
+      <div style="text-align:right;flex-shrink:0">
+        <div class="font-oswald" style="font-size:20px;font-weight:700;color:#F1F5F9;line-height:1">${numFmt.format(s.currentPoints)}</div>
+        <div style="font-size:9px;color:#334155;font-weight:700;margin-top:2px;text-transform:uppercase;letter-spacing:.06em">pts</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Legend for the two bars
+  const legend = anyGain
+    ? `<div style="display:flex;align-items:center;gap:16px;padding:10px 20px;border-top:1px solid rgba(148,163,184,.06)">
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:8px;border-radius:2px;background:rgba(168,85,247,.7)"></div><span style="font-size:10px;color:#475569;font-weight:700">Points cumulés</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:4px;border-radius:2px;background:rgba(34,197,94,.7)"></div><span style="font-size:10px;color:#475569;font-weight:700">${liveDataAvailable ? 'Gain depuis dernier instantané' : 'Gain sur la période'}</span></div>
+      </div>`
+    : '';
+
+  const header = `<div style="display:grid;grid-template-columns:40px 1fr auto;gap:14px;padding:10px 20px;border-bottom:1px solid rgba(148,163,184,.08)">
+    <div style="font-size:9px;font-weight:800;color:#2D3F55;text-transform:uppercase;letter-spacing:.1em;text-align:center">Rg</div>
+    <div style="font-size:9px;font-weight:800;color:#2D3F55;text-transform:uppercase;letter-spacing:.1em">Joueur · gain récent</div>
+    <div style="font-size:9px;font-weight:800;color:#2D3F55;text-transform:uppercase;letter-spacing:.1em;text-align:right">Points</div>
+  </div>`;
+
+  document.getElementById('points-board-inner').innerHTML = header + rows + legend;
 }
 
-function renderChart(series, liveDataAvailable) {
-  const rankKey     = rankMode === 'global' ? 'globalRank'     : 'escmRank';
-  const currentKey  = rankMode === 'global' ? 'currentGlobalRank' : 'currentEscmRank';
-  const lastSnapKey = rankMode === 'global' ? 'lastSnapshotGlobalRank' : 'lastSnapshotEscmRank';
-  const changeKey   = rankMode === 'global' ? 'globalRankChange' : 'escmRankChange';
+// ── Rank trajectory chart (SVG) ──────────────────────────────────────────
+function renderRankChart(series) {
+  const posKey    = rankMode === 'global' ? 'globalRank'        : 'escmRank';
+  const currentKey= rankMode === 'global' ? 'currentGlobalRank' : 'currentEscmRank';
+  const changeKey = rankMode === 'global' ? 'globalRankChange'  : 'escmRankChange';
 
-  const all = series.flatMap(s => s.positions.map(p => p[rankKey]));
+  const all = series.flatMap(s => s.positions.map(p => p[posKey]));
   if (!all.length) return;
 
-  // SVG dimensions — extra right padding for end-labels
-  const W = 1100, H = 480, PL = 54, PR = 190, PT = 28, PB = 50;
-  const plotW = W - PL - PR;
-  const plotH = H - PT - PB;
-  const minR = Math.max(1, Math.min(...all));
-  const maxR = Math.max(...all);
-  const span = Math.max(maxR - minR, 1);
-  const maxLen = Math.max(...series.map(s => s.positions.length), 2);
+  const W = 1100, H = 480, PL = 62, PR = 192, PT = 28, PB = 50;
+  const plotW = W - PL - PR, plotH = H - PT - PB;
+  const minV  = Math.min(...all), maxV = Math.max(...all);
+  const span  = Math.max(maxV - minV, 1);
+  const maxLen= Math.max(...series.map(s => s.positions.length), 2);
 
-  const xOf = i => PL + (i / (maxLen - 1)) * plotW;
-  // Y: rank 1 (best) at TOP → low y value
-  const yOf = v => PT + ((v - minR) / span) * plotH;
+  const xOf = i => PL + (i / Math.max(maxLen - 1, 1)) * plotW;
+  const yOf = v => PT + ((v - minV) / span) * plotH;
 
-  // Smooth bezier path
-  const smoothPath = coords => coords.reduce((p, pt, i) => {
+  const smoothPath = coords => coords.reduce((acc, pt, i) => {
     if (i === 0) return `M ${pt[0].toFixed(1)} ${pt[1].toFixed(1)}`;
     const prev = coords[i - 1];
     const mx = ((prev[0] + pt[0]) / 2).toFixed(1);
-    return `${p} C ${mx} ${prev[1].toFixed(1)}, ${mx} ${pt[1].toFixed(1)}, ${pt[0].toFixed(1)} ${pt[1].toFixed(1)}`;
+    return `${acc} C ${mx} ${prev[1].toFixed(1)}, ${mx} ${pt[1].toFixed(1)}, ${pt[0].toFixed(1)} ${pt[1].toFixed(1)}`;
   }, '');
 
-  // Grid lines — show integer ranks, nicely spaced
-  const rankCount = maxR - minR + 1;
-  const step = rankCount <= 8 ? 1 : rankCount <= 16 ? 2 : rankCount <= 32 ? 4 : 8;
-  const gridRanks = [];
-  for (let r = minR; r <= maxR; r += step) gridRanks.push(r);
-  if (gridRanks[gridRanks.length - 1] !== maxR) gridRanks.push(maxR);
+  // Grid
+  const rankSpan = maxV - minV + 1;
+  const step = rankSpan <= 8 ? 1 : rankSpan <= 16 ? 2 : rankSpan <= 32 ? 4 : 8;
+  const gridVals = [];
+  for (let r = minV; r <= maxV; r += step) gridVals.push(r);
+  if (gridVals[gridVals.length - 1] !== maxV) gridVals.push(maxV);
 
-  const gridSvg = gridRanks.map(r => {
-    const yy = yOf(r).toFixed(1);
+  const gridSvg = gridVals.map(v => {
+    const yy = yOf(v).toFixed(1);
     return `<line x1="${PL}" y1="${yy}" x2="${PL + plotW}" y2="${yy}" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
-      <text x="${PL - 10}" y="${Number(yy) + 4}" fill="#2D3F55" font-size="10" font-family="Manrope,sans-serif" text-anchor="end" font-weight="700">#${r}</text>`;
+      <text x="${PL - 8}" y="${Number(yy) + 4}" fill="#2D3F55" font-size="10" font-family="Manrope,sans-serif" text-anchor="end" font-weight="700">#${v}</text>`;
   }).join('');
 
-  // Time axis labels
   const longest = [...series].sort((a,b) => b.positions.length - a.positions.length)[0];
-  const labelIdxs = maxLen <= 3
+  const tIdxs = maxLen <= 3
     ? [...Array(maxLen).keys()]
     : [...new Set([0, Math.floor((maxLen-1)/3), Math.floor(2*(maxLen-1)/3), maxLen-1])];
-  const timeSvg = labelIdxs.map(idx => {
+  const timeSvg = tIdxs.map(idx => {
     const pt = longest.positions[Math.min(idx, longest.positions.length - 1)];
     if (!pt) return '';
     return `<text x="${xOf(idx).toFixed(1)}" y="${H - 10}" fill="#2D3F55" font-size="9" font-family="Manrope,sans-serif" text-anchor="middle" font-weight="700">${dateFmt.format(new Date(pt.capturedAt))}</text>`;
   }).join('');
 
-  // Build series SVG + collect label positions
-  const labelData = [];
-  const gradDefs = [];
+  const labelData = [], gradDefs = [];
   const seriesSvg = series.map((s, idx) => {
-    const color = COLORS[idx % COLORS.length];
-    const coords = s.positions.map((p, i) => [xOf(i), yOf(p[rankKey])]);
+    const color  = COLORS[idx % COLORS.length];
+    const coords = s.positions.map((p, i) => [xOf(i), yOf(p[posKey])]);
     if (!coords.length) return '';
-    const path = smoothPath(coords);
-    const lastCoord = coords[coords.length - 1];
-    const lastRank  = s.positions[s.positions.length - 1][rankKey];
+    const path = smoothPath(coords), last = coords[coords.length - 1];
+    const floor = (PT + plotH).toFixed(1);
+    const areaPath = path + ` L ${last[0].toFixed(1)} ${floor} L ${coords[0][0].toFixed(1)} ${floor} Z`;
     const gradId = `g${idx}`;
-
     gradDefs.push(`<linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${color}" stop-opacity=".12"/>
+      <stop offset="0" stop-color="${color}" stop-opacity=".10"/>
       <stop offset="1" stop-color="${color}" stop-opacity="0"/>
     </linearGradient>`);
 
-    const areaCoords = [...coords, [lastCoord[0], PT + plotH], [coords[0][0], PT + plotH]];
-    const areaPath = smoothPath(coords) + ` L ${lastCoord[0].toFixed(1)} ${(PT+plotH).toFixed(1)} L ${coords[0][0].toFixed(1)} ${(PT+plotH).toFixed(1)} Z`;
-
-    const change = s[changeKey];
-    const liveRank = s[currentKey];
-    labelData.push({ y: lastCoord[1], color, pseudo: s.pseudo, rank: liveRank, change, liveDataAvailable, idx });
+    const change   = s[changeKey] ?? 0;
+    const curVal   = s[currentKey] ?? 0;
+    labelData.push({ rawY: last[1], y: last[1], color, pseudo: s.pseudo, curVal, change });
 
     return `<path d="${areaPath}" fill="url(#${gradId})"/>
-      <path d="${path}" fill="none" stroke="${color}" stroke-width="${idx === 0 ? 3 : 2}" stroke-opacity="${idx === 0 ? 1 : .72}" stroke-linecap="round" stroke-linejoin="round" class="cseries" data-series="${idx}">
-        <title>${esc(s.pseudo)} · #${lastRank}</title>
-      </path>
-      <circle cx="${lastCoord[0].toFixed(1)}" cy="${lastCoord[1].toFixed(1)}" r="${idx === 0 ? 5 : 4}" fill="${color}" stroke="#0C1320" stroke-width="2.5" pointer-events="none"/>`;
+      <path d="${path}" fill="none" stroke="${color}" stroke-width="${idx === 0 ? 3 : 2}"
+        stroke-opacity="${idx === 0 ? 1 : .70}" stroke-linecap="round" stroke-linejoin="round"
+        class="cseries" data-series="${idx}"/>
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}"
+        r="${idx === 0 ? 5 : 4}" fill="${color}" stroke="#0C1320" stroke-width="2.5" pointer-events="none"/>`;
   }).join('');
 
-  // De-collide end labels
-  const MIN_GAP = 20;
-  const sorted = [...labelData].sort((a, b) => a.y - b.y);
-  // push downward pass
-  for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i].y - sorted[i-1].y < MIN_GAP)
-      sorted[i].y = sorted[i-1].y + MIN_GAP;
-  }
-  // push upward pass
-  for (let i = sorted.length - 2; i >= 0; i--) {
-    if (sorted[i+1].y - sorted[i].y < MIN_GAP)
-      sorted[i].y = sorted[i+1].y - MIN_GAP;
-  }
+  // De-collide labels
+  const sorted = [...labelData].sort((a,b) => a.y - b.y);
+  for (let i = 1; i < sorted.length; i++)
+    if (sorted[i].y - sorted[i-1].y < 20) sorted[i].y = sorted[i-1].y + 20;
+  for (let i = sorted.length - 2; i >= 0; i--)
+    if (sorted[i+1].y - sorted[i].y < 20) sorted[i].y = sorted[i+1].y - 20;
 
-  const labelX = PL + plotW + 14;
-  const labelsSvg = sorted.map(({ y, color, pseudo, rank, change, liveDataAvailable }) => {
-    const dText = fmtDelta(change);
-    const dColor = deltaColor(change);
-    const truncPseudo = pseudo.length > 12 ? pseudo.slice(0, 11) + '…' : pseudo;
+  const labelX  = PL + plotW + 14;
+  const connSvg = sorted.map(({ rawY, y, color }) =>
+    Math.abs(y - rawY) > 5
+      ? `<line x1="${(PL+plotW+7).toFixed(1)}" y1="${rawY.toFixed(1)}" x2="${(labelX-2).toFixed(1)}" y2="${(y+4).toFixed(1)}" stroke="${color}" stroke-width="1" stroke-opacity=".3"/>`
+      : '').join('');
+
+  const labelsSvg = sorted.map(({ y, color, pseudo, curVal, change }) => {
+    const up    = change > 0, down = change < 0;
+    const dText = up ? `▲${change}` : down ? `▼${Math.abs(change)}` : '—';
+    const dColor= up ? '#4ADE80' : down ? '#F87171' : '#334155';
+    const name  = pseudo.length > 13 ? pseudo.slice(0, 12) + '…' : pseudo;
     return `<g>
-      <text x="${labelX}" y="${(y - 2).toFixed(1)}" fill="${color}" font-size="11" font-family="Manrope,sans-serif" font-weight="800">${esc(truncPseudo)}</text>
-      <text x="${labelX}" y="${(y + 10).toFixed(1)}" fill="#475569" font-size="9" font-family="Manrope,sans-serif" font-weight="700">#${rank} <tspan fill="${dColor}" font-weight="800">${dText}</tspan></text>
+      <text x="${labelX}" y="${(y-2).toFixed(1)}" fill="${color}" font-size="11" font-family="Manrope,sans-serif" font-weight="800">${esc(name)}</text>
+      <text x="${labelX}" y="${(y+10).toFixed(1)}" fill="#475569" font-size="9" font-family="Manrope,sans-serif" font-weight="700">#${curVal} <tspan fill="${dColor}" font-weight="800">${dText}</tspan></text>
     </g>`;
   }).join('');
 
-  // Vertical separator before labels
-  const sepX = (PL + plotW + 6).toFixed(1);
-  const sepSvg = `<line x1="${sepX}" y1="${PT}" x2="${sepX}" y2="${PT+plotH}" stroke="rgba(148,163,184,.07)" stroke-width="1"/>`;
-
-  document.getElementById('points-chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Évolution des rangs e-SCM" style="display:block;width:100%;height:auto;overflow:visible">
+  document.getElementById('rank-chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="Évolution e-SCM" style="display:block;width:100%;height:auto;overflow:visible">
     <defs>${gradDefs.join('')}</defs>
     <rect x="${PL}" y="${PT}" width="${plotW}" height="${plotH}" rx="8" fill="rgba(255,255,255,.008)"/>
-    ${gridSvg}
-    ${seriesSvg}
-    ${sepSvg}
-    ${labelsSvg}
-    ${timeSvg}
+    ${gridSvg}${seriesSvg}
+    <line x1="${(PL+plotW+6).toFixed(1)}" y1="${PT}" x2="${(PL+plotW+6).toFixed(1)}" y2="${PT+plotH}" stroke="rgba(148,163,184,.07)" stroke-width="1"/>
+    ${connSvg}${labelsSvg}${timeSvg}
     <line id="crosshair" x1="0" y1="${PT}" x2="0" y2="${PT+plotH}" stroke="#A855F7" stroke-width="1" stroke-dasharray="4 5" opacity=".5" pointer-events="none" visibility="hidden"/>
     <rect id="chart-hitbox" x="${PL}" y="${PT}" width="${plotW}" height="${plotH}" fill="transparent" style="cursor:crosshair"/>
   </svg>`;
 
-  bindChart(series, { W, PL, PT, plotW, plotH, maxLen, xOf, rankKey, currentKey, changeKey });
+  bindRankChart(series, { W, PL, PT, plotW, plotH, maxLen, xOf, posKey });
 }
 
-function bindChart(series, d) {
-  const svg = document.querySelector('#points-chart svg');
-  const hitbox = document.getElementById('chart-hitbox');
+function bindRankChart(series, d) {
+  const svg       = document.querySelector('#rank-chart svg');
+  const hitbox    = document.getElementById('chart-hitbox');
   const crosshair = document.getElementById('crosshair');
-  const tooltip = document.getElementById('chart-tooltip');
-
-  const highlight = idx => {
-    svg.querySelectorAll('.cseries').forEach(p => {
-      const active = idx === null || Number(p.dataset.series) === idx;
-      p.style.opacity = active ? '1' : '.08';
-      if (active && idx !== null) p.style.strokeWidth = '4';
-      else p.style.strokeWidth = '';
-    });
-  };
+  const tooltip   = document.getElementById('chart-tooltip');
+  if (!svg || !hitbox) return;
 
   hitbox.addEventListener('mousemove', e => {
-    const rect = svg.getBoundingClientRect();
-    const svgX = (e.clientX - rect.left) / rect.width * d.W;
-    const ratio = Math.max(0, Math.min(1, (svgX - d.PL) / d.plotW));
-    const snapIdx = Math.round(ratio * (d.maxLen - 1));
-    const cx = d.xOf(snapIdx);
-    crosshair.setAttribute('x1', cx.toFixed(1)); crosshair.setAttribute('x2', cx.toFixed(1)); crosshair.setAttribute('visibility', 'visible');
+    const rect  = svg.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, ((e.clientX - rect.left) / rect.width * d.W - d.PL) / d.plotW));
+    const idx   = Math.round(ratio * (d.maxLen - 1));
+    const cx    = d.xOf(idx).toFixed(1);
+    crosshair.setAttribute('x1', cx); crosshair.setAttribute('x2', cx);
+    crosshair.setAttribute('visibility', 'visible');
 
     const items = series
-      .map((s, i) => ({ s, i, pt: s.positions[Math.min(snapIdx, s.positions.length - 1)] }))
+      .map((s, i) => ({ s, i, pt: s.positions[Math.min(idx, s.positions.length-1)] }))
       .filter(x => x.pt)
-      .sort((a, b) => a.pt[d.rankKey] - b.pt[d.rankKey]);
+      .sort((a, b) => (a.pt[d.posKey]??0) - (b.pt[d.posKey]??0));
 
     const ts = items[0]?.pt.capturedAt;
     tooltip.innerHTML = `<strong style="display:block;margin-bottom:8px;color:#C084FC;font-size:10px;font-weight:800">${ts ? dateFmt.format(new Date(ts)) : ''}</strong>
@@ -258,47 +317,57 @@ function bindChart(series, d) {
         return `<div style="display:grid;grid-template-columns:7px 1fr auto;align-items:center;gap:6px;padding:3px 0">
           <i style="width:7px;height:7px;border-radius:50%;background:${color};display:block"></i>
           <b style="overflow:hidden;color:#94A3B8;white-space:nowrap;text-overflow:ellipsis;font-size:11px">${esc(s.pseudo)}</b>
-          <em style="color:#F1F5F9;font-style:normal;font-weight:800;font-size:12px;font-family:'Oswald',sans-serif">#${pt[d.rankKey]}</em>
+          <em style="color:#F1F5F9;font-style:normal;font-weight:800;font-size:12px;font-family:'Oswald',sans-serif">#${pt[d.posKey]}</em>
         </div>`;
       }).join('')}`;
     tooltip.hidden = false;
-    const tipLeft = Math.min(Math.max(e.clientX - rect.left + 16, 8), rect.width - 210);
-    tooltip.style.left = `${tipLeft}px`;
-    tooltip.style.top = `${Math.max(e.clientY - rect.top - 40, 8)}px`;
+    tooltip.style.left = `${Math.min(Math.max(e.clientX - rect.left + 16, 8), rect.width - 205)}px`;
+    tooltip.style.top  = `${Math.max(e.clientY - rect.top - 40, 8)}px`;
   });
   hitbox.addEventListener('mouseleave', () => {
     crosshair.setAttribute('visibility', 'hidden');
     tooltip.hidden = true;
-    highlight(null);
   });
 }
 
+// ── Switch between rank chart and points board ───────────────────────────
+function updateView(series, liveDataAvailable) {
+  const isPoints = rankMode === 'points';
+  document.getElementById('rank-chart-wrap').hidden = isPoints;
+  document.getElementById('points-board').hidden    = !isPoints;
+  document.getElementById('chart-eyebrow').textContent = isPoints
+    ? 'Progression des points' : 'Trajectoire e-SCM';
+  document.getElementById('chart-title').textContent = isPoints
+    ? 'Classement par points' : 'Évolution du classement';
+
+  if (isPoints) renderPointsBoard(series, liveDataAvailable);
+  else          renderRankChart(series);
+}
+
+// ── Render & load ─────────────────────────────────────────────────────────
 function render(data) {
-  document.getElementById('member-count').textContent = `${data.playerCount} membre${data.playerCount > 1 ? 's' : ''}`;
+  document.getElementById('member-count').textContent =
+    `${data.playerCount} membre${data.playerCount > 1 ? 's' : ''}`;
   document.getElementById('snapshot-info').textContent =
     `${data.snapshotCount} instantané${data.snapshotCount > 1 ? 's' : ''} · dernier ${data.lastCapturedAt ? dateFmt.format(new Date(data.lastCapturedAt)) : '—'}`;
-
-  const diffLabel = document.getElementById('diff-mode-label');
-  diffLabel.textContent = data.liveDataAvailable
-    ? '⚡ Δ vs classement actuel'
-    : '⏱ Δ sur la période';
-
+  document.getElementById('diff-mode-label').textContent = data.liveDataAvailable
+    ? '⚡ Δ vs classement actuel' : '⏱ Δ sur la période';
   if (data.liveDataAvailable) document.getElementById('live-badge').style.display = 'flex';
 
   const empty = data.snapshotCount === 0 || data.series.length === 0;
   document.getElementById('empty-state').hidden = !empty;
-  document.getElementById('dashboard').hidden = empty;
+  document.getElementById('dashboard').hidden   = empty;
   if (empty) return;
 
   currentData = data;
-  renderChart(data.series, data.liveDataAvailable);
+  updateView(data.series, data.liveDataAvailable);
 }
 
 async function loadHistory() {
   document.getElementById('empty-state').hidden = true;
-  document.getElementById('dashboard').hidden = true;
+  document.getElementById('dashboard').hidden   = true;
   try {
-    const res = await fetch(`/api/history?days=${document.getElementById('range-select').value}`);
+    const res  = await fetch(`/api/history?days=${document.getElementById('range-select').value}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur');
     render(data);
@@ -308,19 +377,23 @@ async function loadHistory() {
   }
 }
 
-document.querySelectorAll('.rank-mode-switch button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    rankMode = btn.dataset.mode;
-    document.querySelectorAll('.rank-mode-switch button').forEach(b => {
-      const active = b === btn;
-      b.setAttribute('data-active', active ? '' : null);
-      b.style.background = active ? '#9333EA' : 'transparent';
-      b.style.color = active ? '#fff' : '#475569';
-      if (!active) b.removeAttribute('data-active');
-    });
-    if (currentData) renderChart(currentData.series, currentData.liveDataAvailable);
+// ── Mode switch ──────────────────────────────────────────────────────────
+function applyModeStyles() {
+  document.querySelectorAll('.rank-mode-switch button').forEach(b => {
+    const active = b.dataset.mode === rankMode;
+    b.style.background = active ? '#9333EA' : 'transparent';
+    b.style.color      = active ? '#fff'    : '#475569';
+  });
+}
+document.querySelectorAll('.rank-mode-switch button').forEach(b => {
+  b.style.cssText = 'padding:5px 11px;border:0;border-radius:6px;font:700 11px Manrope,sans-serif;cursor:pointer;transition:background .12s,color .12s';
+  b.addEventListener('click', () => {
+    rankMode = b.dataset.mode;
+    applyModeStyles();
+    if (currentData) updateView(currentData.series, currentData.liveDataAvailable);
   });
 });
+applyModeStyles();
 
 document.getElementById('range-select').addEventListener('change', loadHistory);
 loadHistory();

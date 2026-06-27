@@ -43,6 +43,14 @@ export async function ensureHistorySchema(): Promise<void> {
         ON es_position_history(player_id, snapshot_id)`,
     ], "write");
 
+    // Add points column if missing (migration for existing deployments)
+    const colInfo = await db.execute("PRAGMA table_info(es_position_history)");
+    const hasPoints = colInfo.rows.some((r) => String(r["name"]) === "points");
+    if (!hasPoints) {
+      await db.execute("ALTER TABLE es_position_history ADD COLUMN points INTEGER NOT NULL DEFAULT 0");
+      console.log("[history] colonne 'points' ajoutée à es_position_history");
+    }
+
     const legacyTable = await db.execute(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'player_standings_history'"
     );
@@ -150,9 +158,9 @@ export async function captureStandingsSnapshot(now = new Date()): Promise<Captur
     { sql: "DELETE FROM es_position_history WHERE snapshot_id = ?", args: [snapshotId] },
     ...esPlayers.map((player, index): InStatement => ({
       sql: `INSERT INTO es_position_history
-        (snapshot_id, player_id, pseudo, global_rank, escm_rank)
-        VALUES (?, ?, ?, ?, ?)`,
-      args: [snapshotId, player.id, player.pseudo, player.rank, index + 1],
+        (snapshot_id, player_id, pseudo, global_rank, escm_rank, points)
+        VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [snapshotId, player.id, player.pseudo, player.rank, index + 1, player.points],
     })),
   ];
   await db.batch(statements, "write");
@@ -171,6 +179,7 @@ export interface PositionPoint {
   capturedAt: string;
   globalRank: number;
   escmRank: number;
+  points: number;
 }
 
 export interface PlayerPositionSeries {
@@ -178,10 +187,13 @@ export interface PlayerPositionSeries {
   pseudo: string;
   currentGlobalRank: number;
   currentEscmRank: number;
+  currentPoints: number;
   lastSnapshotGlobalRank: number;
   lastSnapshotEscmRank: number;
+  lastSnapshotPoints: number;
   globalRankChange: number;
   escmRankChange: number;
+  pointsChange: number;
   liveDataAvailable: boolean;
   positions: PositionPoint[];
 }
@@ -247,7 +259,7 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
 
   const placeholders = selectedIds.map(() => "?").join(",");
   const history = selectedIds.length === 0 ? { rows: [] } : await db.execute({
-    sql: `SELECT p.player_id, p.pseudo, p.global_rank, p.escm_rank, s.captured_at
+    sql: `SELECT p.player_id, p.pseudo, p.global_rank, p.escm_rank, p.points, s.captured_at
       FROM es_position_history p
       JOIN standings_snapshots s ON s.id = p.snapshot_id
       WHERE s.captured_at >= ? AND p.player_id IN (${placeholders})
@@ -262,33 +274,40 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
       capturedAt: String(row["captured_at"]),
       globalRank: numberValue(row["global_rank"]),
       escmRank: numberValue(row["escm_rank"]),
+      points: numberValue(row["points"]),
     };
     const current = grouped.get(playerId);
     if (current) {
       current.positions.push(point);
       current.lastSnapshotGlobalRank = point.globalRank;
       current.lastSnapshotEscmRank = point.escmRank;
+      current.lastSnapshotPoints = point.points;
       current.currentGlobalRank = point.globalRank;
       current.currentEscmRank = point.escmRank;
+      current.currentPoints = point.points;
     } else {
       grouped.set(playerId, {
         playerId,
         pseudo: String(row["pseudo"]),
         currentGlobalRank: point.globalRank,
         currentEscmRank: point.escmRank,
+        currentPoints: point.points,
         lastSnapshotGlobalRank: point.globalRank,
         lastSnapshotEscmRank: point.escmRank,
+        lastSnapshotPoints: point.points,
         globalRankChange: 0,
         escmRankChange: 0,
+        pointsChange: 0,
         liveDataAvailable: false,
         positions: [point],
       });
     }
   }
 
-  // Fetch live standings to compute diff: last snapshot → current live rank
+  // Fetch live standings to compute diff: last snapshot → current live rank/points
   const liveGlobalMap = new Map<string, number>();
-  const liveEscmMap = new Map<string, number>();
+  const liveEscmMap   = new Map<string, number>();
+  const livePointsMap = new Map<string, number>();
   let liveDataAvailable = false;
   try {
     const live = await getMppClassement();
@@ -296,6 +315,7 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
     esLive.forEach((p, i) => {
       liveGlobalMap.set(p.id, p.rank);
       liveEscmMap.set(p.id, i + 1);
+      livePointsMap.set(p.id, p.points);
     });
     liveDataAvailable = esLive.length > 0;
   } catch {
@@ -308,19 +328,26 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
     if (liveDataAvailable) {
       const liveG = liveGlobalMap.get(s.playerId);
       const liveE = liveEscmMap.get(s.playerId);
+      const liveP = livePointsMap.get(s.playerId);
       if (liveG !== undefined && liveE !== undefined) {
-        // positive change = improved (lower rank number is better)
+        // positive rank change = improved (lower rank number is better)
         s.globalRankChange = last.globalRank - liveG;
-        s.escmRankChange = last.escmRank - liveE;
+        s.escmRankChange   = last.escmRank   - liveE;
         s.currentGlobalRank = liveG;
-        s.currentEscmRank = liveE;
+        s.currentEscmRank   = liveE;
         s.liveDataAvailable = true;
+      }
+      if (liveP !== undefined) {
+        // positive points change = gained points (higher is better)
+        s.pointsChange   = liveP - last.points;
+        s.currentPoints  = liveP;
       }
     } else {
       // fall back: diff over the selected period (first snapshot → last snapshot)
       const first = s.positions[0]!;
       s.globalRankChange = first.globalRank - last.globalRank;
-      s.escmRankChange = first.escmRank - last.escmRank;
+      s.escmRankChange   = first.escmRank   - last.escmRank;
+      s.pointsChange     = last.points      - first.points;
     }
   }
 
