@@ -449,3 +449,145 @@ input, select, textarea {
 @media (max-width: 640px) {
   #metric-grid { grid-template-columns: repeat(2,1fr) !important; }
 }
+
+/* ─── Responsive layout refinements ─────────────────────────── */
+.app-shell {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-main,
+.history-main {
+  width: 100%;
+}
+
+#table-scroll-wrap > div:first-child {
+  min-width: 640px;
+}
+
+@media (max-width: 900px) {
+  .history-header-actions {
+    gap: 8px !important;
+  }
+
+  .history-dashboard-panel {
+    padding: 14px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+
+  .app-header-inner {
+    height: auto !important;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .app-header-actions,
+  .history-header-actions {
+    width: 100%;
+    margin-left: 0 !important;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .app-main {
+    min-height: calc(100dvh - 96px);
+    padding-top: 12px !important;
+    padding-bottom: 14px !important;
+    overflow: visible;
+  }
+
+  .ranking-section {
+    overflow: visible;
+  }
+
+  .ranking-toolbar {
+    align-items: stretch !important;
+  }
+
+  #dept-filters {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    padding-bottom: 2px;
+  }
+
+  .ranking-toolbar > div[style*="width:1px"] {
+    display: none;
+  }
+
+  #search-input {
+    min-height: 36px;
+  }
+
+  #btn-me-toggle,
+  #per-page-select {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 36px;
+  }
+
+  #row-count {
+    width: 100%;
+    text-align: center;
+  }
+
+  .me-panel {
+    flex-wrap: wrap;
+  }
+
+  .me-panel input {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .me-panel button {
+    min-height: 34px;
+  }
+
+  #table-scroll-wrap {
+    max-height: none;
+    overflow: auto !important;
+  }
+
+  .history-main {
+    padding-top: 14px !important;
+    padding-bottom: 28px !important;
+  }
+
+  .history-dashboard-panel {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  #rank-chart-wrap,
+  #points-board {
+    overflow-x: auto !important;
+  }
+
+  #rank-chart svg,
+  #points-board svg {
+    min-width: 620px;
+  }
+}
+
+@media (max-width: 420px) {
+  .dept-tab {
+    padding-inline: 0.7rem;
+  }
+
+  .font-oswald {
+    letter-spacing: 0.08em !important;
+  }
+
+  #table-scroll-wrap > div:first-child {
+    min-width: 560px;
+  }
+}
