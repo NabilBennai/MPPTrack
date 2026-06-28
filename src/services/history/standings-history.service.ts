@@ -377,3 +377,157 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
     liveDataAvailable,
   };
 }
+
+export interface PlayerMovement {
+  playerId: string;
+  pseudo: string;
+  previousGlobalRank: number | null;
+  currentGlobalRank: number | null;
+  previousDepartmentRank: number | null;
+  currentDepartmentRank: number | null;
+  previousPoints: number | null;
+  currentPoints: number | null;
+  rankDelta: number;
+  pointsDelta: number;
+}
+
+export interface MovementsData {
+  contestTitle: string;
+  previousCapturedAt: string | null;
+  currentCapturedAt: string | null;
+  windowHours: number;
+  playerCount: number;
+  movements: PlayerMovement[];
+}
+
+interface MovementSnapshotRef {
+  id: string;
+  capturedAt: string;
+  contestTitle: string;
+}
+
+export async function getStandingsMovements(windowHours = 24): Promise<MovementsData> {
+  await ensureHistorySchema();
+  const db = getClient();
+  const safeWindowHours = Math.min(Math.max(Math.trunc(windowHours) || 24, 1), 24 * 30);
+
+  const latestResult = await db.execute(`SELECT id, captured_at, contest_title
+    FROM standings_snapshots
+    WHERE EXISTS (SELECT 1 FROM es_position_history p WHERE p.snapshot_id = standings_snapshots.id)
+    ORDER BY captured_at DESC
+    LIMIT 1`);
+  const latestRow = latestResult.rows[0];
+  if (!latestRow) {
+    return {
+      contestTitle: "MPP",
+      previousCapturedAt: null,
+      currentCapturedAt: null,
+      windowHours: safeWindowHours,
+      playerCount: 0,
+      movements: [],
+    };
+  }
+
+  const current: MovementSnapshotRef = {
+    id: String(latestRow["id"]),
+    capturedAt: String(latestRow["captured_at"]),
+    contestTitle: String(latestRow["contest_title"] ?? "MPP"),
+  };
+  const targetPreviousAt = new Date(new Date(current.capturedAt).getTime() - safeWindowHours * 3_600_000).toISOString();
+
+  const previousResult = await db.execute({
+    sql: `SELECT id, captured_at, contest_title
+      FROM standings_snapshots
+      WHERE captured_at <= ?
+        AND id <> ?
+        AND EXISTS (SELECT 1 FROM es_position_history p WHERE p.snapshot_id = standings_snapshots.id)
+      ORDER BY captured_at DESC
+      LIMIT 1`,
+    args: [targetPreviousAt, current.id],
+  });
+  let previousRow = previousResult.rows[0];
+  if (!previousRow) {
+    const fallback = await db.execute({
+      sql: `SELECT id, captured_at, contest_title
+        FROM standings_snapshots
+        WHERE captured_at < ?
+          AND id <> ?
+          AND EXISTS (SELECT 1 FROM es_position_history p WHERE p.snapshot_id = standings_snapshots.id)
+        ORDER BY captured_at DESC
+        LIMIT 1`,
+      args: [current.capturedAt, current.id],
+    });
+    previousRow = fallback.rows[0];
+  }
+
+  if (!previousRow) {
+    return {
+      contestTitle: current.contestTitle,
+      previousCapturedAt: null,
+      currentCapturedAt: current.capturedAt,
+      windowHours: safeWindowHours,
+      playerCount: 0,
+      movements: [],
+    };
+  }
+
+  const previous: MovementSnapshotRef = {
+    id: String(previousRow["id"]),
+    capturedAt: String(previousRow["captured_at"]),
+    contestTitle: String(previousRow["contest_title"] ?? current.contestTitle),
+  };
+
+  const positions = await db.execute({
+    sql: `SELECT snapshot_id, player_id, pseudo, global_rank, escm_rank, points
+      FROM es_position_history
+      WHERE snapshot_id IN (?, ?)`,
+    args: [previous.id, current.id],
+  });
+
+  const movementByPlayer = new Map<string, PlayerMovement>();
+  for (const row of positions.rows) {
+    const playerId = String(row["player_id"]);
+    const entry = movementByPlayer.get(playerId) ?? {
+      playerId,
+      pseudo: String(row["pseudo"]),
+      previousGlobalRank: null,
+      currentGlobalRank: null,
+      previousDepartmentRank: null,
+      currentDepartmentRank: null,
+      previousPoints: null,
+      currentPoints: null,
+      rankDelta: 0,
+      pointsDelta: 0,
+    };
+    entry.pseudo = String(row["pseudo"]);
+    if (String(row["snapshot_id"]) === previous.id) {
+      entry.previousGlobalRank = numberValue(row["global_rank"]);
+      entry.previousDepartmentRank = numberValue(row["escm_rank"]);
+      entry.previousPoints = numberValue(row["points"]);
+    } else {
+      entry.currentGlobalRank = numberValue(row["global_rank"]);
+      entry.currentDepartmentRank = numberValue(row["escm_rank"]);
+      entry.currentPoints = numberValue(row["points"]);
+    }
+    movementByPlayer.set(playerId, entry);
+  }
+
+  const movements = [...movementByPlayer.values()].map((entry) => ({
+    ...entry,
+    rankDelta: entry.previousDepartmentRank !== null && entry.currentDepartmentRank !== null
+      ? entry.previousDepartmentRank - entry.currentDepartmentRank
+      : 0,
+    pointsDelta: entry.previousPoints !== null && entry.currentPoints !== null
+      ? entry.currentPoints - entry.previousPoints
+      : 0,
+  }));
+
+  return {
+    contestTitle: current.contestTitle || previous.contestTitle,
+    previousCapturedAt: previous.capturedAt,
+    currentCapturedAt: current.capturedAt,
+    windowHours: safeWindowHours,
+    playerCount: movements.length,
+    movements: movements.sort((a, b) => a.pseudo.localeCompare(b.pseudo, "fr")),
+  };
+}

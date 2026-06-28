@@ -23,6 +23,7 @@ import {
 import {
   captureStandingsSnapshot,
   getHistoryDashboard,
+  getStandingsMovements,
 } from "../services/history/standings-history.service.js";
 
 function isDev(): boolean {
@@ -57,6 +58,16 @@ export async function mppHistoryDataHandler(req: Request, res: Response): Promis
     res.json(await getHistoryDashboard(days, players));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Historique indisponible.";
+    res.status(500).json({ error: message });
+  }
+}
+
+export async function mppMovementsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const hours = typeof req.query["hours"] === "string" ? Number(req.query["hours"]) : 24;
+    res.json(await getStandingsMovements(hours));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Mouvements indisponibles.";
     res.status(500).json({ error: message });
   }
 }

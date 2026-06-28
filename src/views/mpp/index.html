@@ -44,6 +44,24 @@
     </div>
   </div>
 
+
+  <!-- Mouvements 24h -->
+  <section id="movements-panel" style="flex-shrink:0;border-radius:14px;border:1px solid rgba(148,163,184,.09);background:#111827;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <h2 class="font-oswald" style="margin:0;color:#F1F5F9;font-size:17px;letter-spacing:.08em">MOUVEMENTS 24H</h2>
+        <p id="movements-period" style="margin:2px 0 0;color:#475569;font-size:11px;font-family:'Manrope',sans-serif">Comparaison des snapshots sur 24h glissantes…</p>
+      </div>
+      <button onclick="loadMovements()" title="Rafraîchir les mouvements"
+        style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(148,163,184,.12);background:rgba(255,255,255,.04);color:#94A3B8;cursor:pointer">↺</button>
+    </div>
+    <div id="movements-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div style="height:118px;border-radius:12px" class="shimmer"></div>
+      <div style="height:118px;border-radius:12px;animation-delay:.12s" class="shimmer"></div>
+      <div style="height:118px;border-radius:12px;animation-delay:.24s" class="shimmer"></div>
+    </div>
+  </section>
+
   <!-- Classement section -->
   <div class="ranking-section" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0">
 
@@ -165,6 +183,68 @@
 </div>
 
 <script>
+// ── Mouvements 24h ───────────────────────────────────────────────────────
+function fmtRank(value) { return value === null || value === undefined ? '—' : '#' + value; }
+function fmtPoints(value) { return value === null || value === undefined ? '—' : String(value); }
+function fmtSigned(value) { return value > 0 ? '+' + value : String(value); }
+function fmtMovementDate(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+}
+function escMovementHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function movementCard(title, item, mode) {
+  if (!item) {
+    return `<article style="border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;color:#64748B;font-size:13px;font-family:'Manrope',sans-serif">
+      <strong style="display:block;color:#F1F5F9;margin-bottom:12px">${title}</strong>Aucune donnée disponible.
+    </article>`;
+  }
+  const isPoints = mode === 'points';
+  const delta = isPoints ? item.pointsDelta : item.rankDelta;
+  const color = delta >= 0 ? '#22C55E' : '#EF4444';
+  const previous = isPoints ? fmtPoints(item.previousPoints) : fmtRank(item.previousDepartmentRank);
+  const current = isPoints ? fmtPoints(item.currentPoints) : fmtRank(item.currentDepartmentRank);
+  const label = isPoints ? 'points' : 'rang dép.';
+  return `<article style="border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;font-family:'Manrope',sans-serif">
+    <strong style="display:block;color:#F1F5F9;font-size:13px;margin-bottom:10px">${title}</strong>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+      <span style="color:#E2E8F0;font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escMovementHtml(item.pseudo)}</span>
+      <span style="color:${color};font-weight:900;font-size:18px">${fmtSigned(delta)}</span>
+    </div>
+    <div style="margin-top:8px;color:#94A3B8;font-size:12px">${label} : ${previous} → ${current}</div>
+    <div style="margin-top:4px;color:#475569;font-size:11px">Global : ${fmtRank(item.previousGlobalRank)} → ${fmtRank(item.currentGlobalRank)} · Points : ${fmtPoints(item.previousPoints)} → ${fmtPoints(item.currentPoints)}</div>
+  </article>`;
+}
+async function loadMovements() {
+  const grid = document.getElementById('movements-grid');
+  const period = document.getElementById('movements-period');
+  if (!grid) return;
+  try {
+    const response = await fetch('/api/movements?hours=24');
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json();
+    const movements = Array.isArray(data.movements) ? data.movements : [];
+    const eligibleRanks = movements.filter(m => m.previousDepartmentRank !== null && m.currentDepartmentRank !== null);
+    const eligiblePoints = movements.filter(m => m.previousPoints !== null && m.currentPoints !== null);
+    const topProgression = [...eligibleRanks].sort((a, b) => b.rankDelta - a.rankDelta)[0];
+    const topChute = [...eligibleRanks].sort((a, b) => a.rankDelta - b.rankDelta)[0];
+    const topPoints = [...eligiblePoints].sort((a, b) => b.pointsDelta - a.pointsDelta)[0];
+    period.textContent = data.previousCapturedAt && data.currentCapturedAt
+      ? `Snapshots comparés : ${fmtMovementDate(data.previousCapturedAt)} → ${fmtMovementDate(data.currentCapturedAt)} (${data.windowHours || 24}h glissantes)`
+      : 'Deux snapshots sont nécessaires pour calculer les mouvements 24h.';
+    grid.innerHTML = [
+      movementCard('Top progression', topProgression, 'rank'),
+      movementCard('Top chute', topChute, 'rank'),
+      movementCard('Plus gros gain de points', topPoints, 'points'),
+    ].join('');
+  } catch (_err) {
+    period.textContent = 'Mouvements indisponibles pour le moment.';
+    grid.innerHTML = `<div style="grid-column:1/-1;color:#EF4444;border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px;background:rgba(239,68,68,.06);font-size:13px;font-family:'Manrope',sans-serif">Erreur lors du chargement des mouvements.</div>`;
+  }
+}
+document.addEventListener('DOMContentLoaded', loadMovements);
+
 // ── Dept filter pills ─────────────────────────────────────────────────────
 function setActivePill(dept) {
   document.querySelectorAll('.dept-tab').forEach(p => {
