@@ -216,11 +216,33 @@ function numberValue(value: unknown): number {
   return typeof value === "bigint" ? Number(value) : Number(value ?? 0);
 }
 
-export async function getHistoryDashboard(days = 7, playerIds: string[] = []): Promise<HistoryDashboardData> {
+export function parseHistoryPeriod(period: string | undefined, fallbackDays = 7): { label: string; milliseconds: number } {
+  const fallback = `${Math.min(Math.max(Math.trunc(fallbackDays) || 7, 1), 90)}d`;
+  const raw = (period ?? fallback).trim().toLowerCase();
+  const match = /^(\d+)(h|d)$/.exec(raw);
+  if (!match) return parseHistoryPeriod(fallback, 7);
+
+  const amount = Number(match[1]);
+  const unit = match[2];
+  const maxHours = 24 * 90;
+  const requestedHours = unit === "h" ? amount : amount * 24;
+  const hours = Math.min(Math.max(Math.trunc(requestedHours) || fallbackDays * 24, 1), maxHours);
+  return {
+    label: hours % 24 === 0 ? `${hours / 24}d` : `${hours}h`,
+    milliseconds: hours * 3_600_000,
+  };
+}
+
+export async function getHistoryDashboard(
+  daysOrPeriod: number | string = 7,
+  playerIds: string[] = []
+): Promise<HistoryDashboardData> {
   await ensureHistorySchema();
   const db = getClient();
-  const safeDays = Math.min(Math.max(Math.trunc(days) || 7, 1), 90);
-  const since = new Date(Date.now() - safeDays * 86_400_000).toISOString();
+  const period = typeof daysOrPeriod === "string"
+    ? parseHistoryPeriod(daysOrPeriod)
+    : parseHistoryPeriod(undefined, daysOrPeriod);
+  const since = new Date(Date.now() - period.milliseconds).toISOString();
   const summary = await db.execute({
     sql: `SELECT COUNT(DISTINCT s.id) AS snapshot_count,
       MIN(s.captured_at) AS first_captured_at,
@@ -350,8 +372,6 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
         s.liveDataAvailable = true;
       }
       if (liveP !== undefined) {
-        // positive points change = gained points (higher is better)
-        s.pointsChange   = liveP - last.points;
         s.currentPoints  = liveP;
       }
       s.goodResults        = liveGoodMap.get(s.playerId)   ?? 0;
@@ -362,8 +382,9 @@ export async function getHistoryDashboard(days = 7, playerIds: string[] = []): P
       const first = s.positions[0]!;
       s.globalRankChange = first.globalRank - last.globalRank;
       s.escmRankChange   = first.escmRank   - last.escmRank;
-      s.pointsChange     = last.points      - first.points;
     }
+    const first = s.positions[0]!;
+    s.pointsChange = last.points - first.points;
   }
 
   return {

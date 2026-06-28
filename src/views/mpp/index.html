@@ -62,6 +62,31 @@
     </div>
   </section>
 
+  <!-- Forme du moment -->
+  <section id="form-panel" style="flex-shrink:0;border-radius:14px;border:1px solid rgba(148,163,184,.09);background:#111827;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div>
+        <h2 class="font-oswald" style="margin:0;color:#F1F5F9;font-size:17px;letter-spacing:.08em">FORME DU MOMENT</h2>
+        <p id="form-period" style="margin:2px 0 0;color:#475569;font-size:11px;font-family:'Manrope',sans-serif">Gains de points sur la période sélectionnée…</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <select id="form-period-select" onchange="loadFormRanking(this.value)"
+          style="border-radius:8px;padding:5px 9px;font-size:12px;font-family:'Manrope',sans-serif;cursor:pointer;outline:none;background:#0C1320;color:#94A3B8;border:1px solid rgba(148,163,184,.12)">
+          <option value="24h">24h</option>
+          <option value="48h">48h</option>
+          <option value="7d">7 jours</option>
+        </select>
+        <button onclick="loadFormRanking(document.getElementById('form-period-select')?.value || '24h')" title="Rafraîchir la forme"
+          style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(148,163,184,.12);background:rgba(255,255,255,.04);color:#94A3B8;cursor:pointer">↺</button>
+      </div>
+    </div>
+    <div id="form-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div style="height:104px;border-radius:12px" class="shimmer"></div>
+      <div style="height:104px;border-radius:12px;animation-delay:.12s" class="shimmer"></div>
+      <div style="height:104px;border-radius:12px;animation-delay:.24s" class="shimmer"></div>
+    </div>
+  </section>
+
   <!-- Classement section -->
   <div class="ranking-section" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0">
 
@@ -244,6 +269,45 @@ async function loadMovements() {
   }
 }
 document.addEventListener('DOMContentLoaded', loadMovements);
+
+// ── Forme du moment ─────────────────────────────────────────────────────
+function formLabel(period) { return period === '7d' ? '7 jours' : period; }
+function formCard(item) {
+  if (!item) {
+    return `<article style="border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;color:#64748B;font-size:13px;font-family:'Manrope',sans-serif">Aucune donnée disponible.</article>`;
+  }
+  const delta = Number(item.pointsChange || 0);
+  const color = delta >= 0 ? '#22C55E' : '#EF4444';
+  return `<article style="border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;font-family:'Manrope',sans-serif">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+      <span style="color:#E2E8F0;font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">#${item.rank} ${escMovementHtml(item.pseudo)}</span>
+      <span style="color:${color};font-weight:900;font-size:18px">${fmtSigned(delta)}</span>
+    </div>
+    <div style="margin-top:8px;color:#94A3B8;font-size:12px">Points : ${fmtPoints(item.firstSnapshotPoints)} → ${fmtPoints(item.lastSnapshotPoints)}</div>
+    <div style="margin-top:4px;color:#475569;font-size:11px">Rang e-SCM actuel : ${fmtRank(item.currentEscmRank)} · Global : ${fmtRank(item.currentGlobalRank)}</div>
+  </article>`;
+}
+async function loadFormRanking(periodValue) {
+  const period = periodValue || '24h';
+  const grid = document.getElementById('form-grid');
+  const label = document.getElementById('form-period');
+  if (!grid) return;
+  try {
+    const response = await fetch('/api/form-ranking?period=' + encodeURIComponent(period));
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json();
+    const ranking = Array.isArray(data.ranking) ? data.ranking : [];
+    label.textContent = data.firstCapturedAt && data.lastCapturedAt
+      ? `Top gains de points sur ${formLabel(period)} : ${fmtMovementDate(data.firstCapturedAt)} → ${fmtMovementDate(data.lastCapturedAt)}`
+      : `Deux snapshots sont nécessaires pour calculer la forme sur ${formLabel(period)}.`;
+    grid.innerHTML = ranking.slice(0, 3).map(formCard).join('') || [null, null, null].map(formCard).join('');
+  } catch (_err) {
+    label.textContent = 'Forme indisponible pour le moment.';
+    grid.innerHTML = `<div style="grid-column:1/-1;color:#EF4444;border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px;background:rgba(239,68,68,.06);font-size:13px;font-family:'Manrope',sans-serif">Erreur lors du chargement de la forme.</div>`;
+  }
+}
+document.addEventListener('DOMContentLoaded', () => loadFormRanking('24h'));
+
 
 // ── Dept filter pills ─────────────────────────────────────────────────────
 function setActivePill(dept) {
