@@ -59,11 +59,50 @@ export async function mppDuelDataHandler(req: Request, res: Response): Promise<v
     const playerA = typeof req.query["playerA"] === "string" ? req.query["playerA"] : "";
     const playerB = typeof req.query["playerB"] === "string" ? req.query["playerB"] : "";
     const period = typeof req.query["period"] === "string" ? req.query["period"] : "30d";
-    res.json(await getDuelHistory(playerA, playerB, period));
+    const players = await getMppClassement();
+    const playerAId = resolvePlayerId(playerA, players);
+    const playerBId = resolvePlayerId(playerB, players);
+    res.json(await getDuelHistory(playerAId, playerBId, period));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Duel indisponible.";
     res.status(400).json({ error: message });
   }
+}
+
+export async function mppDuelPlayersHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const players = (await getMppClassement())
+      .filter((player) => player.departmentCode === "ES")
+      .sort((a, b) => a.rank - b.rank)
+      .map((player, index) => ({
+        id: player.id,
+        pseudo: player.pseudo,
+        label: `${player.pseudo} · #${index + 1} e-SCM · #${player.rank} global`,
+        globalRank: player.rank,
+        departmentRank: index + 1,
+      }));
+    res.json({ players });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Joueurs indisponibles.";
+    res.status(500).json({ error: message });
+  }
+}
+
+function resolvePlayerId(value: string, players: Awaited<ReturnType<typeof getMppClassement>>): string {
+  const normalizedValue = normalizePlayerSelectorValue(value);
+  if (!normalizedValue) return "";
+
+  const exactMatch = players.find((player) =>
+    player.id === value || normalizePlayerSelectorValue(player.pseudo) === normalizedValue
+  );
+  if (!exactMatch) {
+    throw new Error(`Joueur introuvable : ${value}`);
+  }
+  return exactMatch.id;
+}
+
+function normalizePlayerSelectorValue(value: string): string {
+  return value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 export async function mppHistoryDataHandler(req: Request, res: Response): Promise<void> {

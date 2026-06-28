@@ -15,6 +15,7 @@ import {
   mppSnapshotCronHandler,
   mppDuelPageHandler,
   mppDuelDataHandler,
+  mppDuelPlayersHandler,
 } from "../controllers/mpp.controller.js";
 
 const router = Router();
@@ -24,6 +25,7 @@ router.get("/history",             mppHistoryPageHandler);
 router.get("/duel",                mppDuelPageHandler);
 router.get("/api/history",         mppHistoryDataHandler);
 router.get("/api/duel",            mppDuelDataHandler);
+router.get("/api/duel/players",    mppDuelPlayersHandler);
 router.get("/api/movements",       mppMovementsHandler);
 router.get("/api/form-ranking",    mppFormRankingHandler);
 router.get("/api/cron/snapshot",   mppSnapshotCronHandler);
