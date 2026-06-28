@@ -399,6 +399,38 @@ export async function getHistoryDashboard(
   };
 }
 
+
+export interface DuelHistoryData extends HistoryDashboardData {
+  playerA: string;
+  playerB: string;
+}
+
+export async function getDuelHistory(
+  playerAId: string,
+  playerBId: string,
+  period: number | string = "30d",
+): Promise<DuelHistoryData> {
+  const playerA = playerAId.trim();
+  const playerB = playerBId.trim();
+  if (!playerA || !playerB) {
+    throw new Error("Les paramètres playerA et playerB sont requis.");
+  }
+  if (playerA === playerB) {
+    throw new Error("Sélectionnez deux joueurs différents.");
+  }
+
+  const dashboard = await getHistoryDashboard(period, [playerA, playerB]);
+  const order = new Map([[playerA, 0], [playerB, 1]]);
+  return {
+    ...dashboard,
+    playerA,
+    playerB,
+    series: dashboard.series
+      .filter((player) => player.playerId === playerA || player.playerId === playerB)
+      .sort((a, b) => (order.get(a.playerId) ?? 99) - (order.get(b.playerId) ?? 99)),
+  };
+}
+
 export interface PlayerMovement {
   playerId: string;
   pseudo: string;
