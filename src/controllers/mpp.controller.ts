@@ -105,6 +105,77 @@ export async function mppMovementsHandler(req: Request, res: Response): Promise<
   }
 }
 
+export async function mppRivalryReportHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const hours = typeof req.query["hours"] === "string" ? Number(req.query["hours"]) : 24;
+    const data = await getStandingsMovements(hours);
+    const ranked = data.movements
+      .filter((m) => m.currentDepartmentRank !== null && m.currentPoints !== null)
+      .sort((a, b) => (a.currentDepartmentRank ?? 0) - (b.currentDepartmentRank ?? 0));
+
+    const tightDuels = ranked
+      .slice(0, -1)
+      .map((leader, index) => {
+        const chaser = ranked[index + 1];
+        if (!chaser || leader.currentPoints === null || chaser.currentPoints === null) return null;
+        return {
+          leader: leader.pseudo,
+          chaser: chaser.pseudo,
+          leaderRank: leader.currentDepartmentRank,
+          chaserRank: chaser.currentDepartmentRank,
+          gap: leader.currentPoints - chaser.currentPoints,
+        };
+      })
+      .filter((duel): duel is NonNullable<typeof duel> => duel !== null)
+      .sort((a, b) => a.gap - b.gap || (a.leaderRank ?? 0) - (b.leaderRank ?? 0))
+      .slice(0, 5);
+
+    const overtakes = data.movements
+      .filter((m) => m.previousDepartmentRank !== null && m.currentDepartmentRank !== null && m.rankDelta > 0)
+      .sort((a, b) => b.rankDelta - a.rankDelta || b.pointsDelta - a.pointsDelta)
+      .slice(0, 5)
+      .map((m) => ({
+        pseudo: m.pseudo,
+        previousRank: m.previousDepartmentRank,
+        currentRank: m.currentDepartmentRank,
+        rankDelta: m.rankDelta,
+        pointsDelta: m.pointsDelta,
+      }));
+
+    const hotChasers = data.movements
+      .filter((m) => m.currentDepartmentRank !== null && m.pointsDelta > 0)
+      .sort((a, b) => b.pointsDelta - a.pointsDelta || b.rankDelta - a.rankDelta)
+      .slice(0, 3)
+      .map((m) => ({
+        pseudo: m.pseudo,
+        currentRank: m.currentDepartmentRank,
+        pointsDelta: m.pointsDelta,
+        rankDelta: m.rankDelta,
+      }));
+
+    const headline = overtakes[0]
+      ? `${overtakes[0].pseudo} signe le dépassement du jour avec ${overtakes[0].rankDelta} place${overtakes[0].rankDelta > 1 ? "s" : ""} gagnée${overtakes[0].rankDelta > 1 ? "s" : ""}.`
+      : tightDuels[0]
+        ? `${tightDuels[0].chaser} est à ${tightDuels[0].gap} point${tightDuels[0].gap > 1 ? "s" : ""} de ${tightDuels[0].leader}.`
+        : "Le classement reste calme, mais les écarts se surveillent.";
+
+    res.json({
+      contestTitle: data.contestTitle,
+      previousCapturedAt: data.previousCapturedAt,
+      currentCapturedAt: data.currentCapturedAt,
+      windowHours: data.windowHours,
+      playerCount: data.playerCount,
+      headline,
+      tightDuels,
+      overtakes,
+      hotChasers,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Rapport rivalités indisponible.";
+    res.status(500).json({ error: message });
+  }
+}
+
 export async function mppSnapshotCronHandler(req: Request, res: Response): Promise<void> {
   const cronSecret = process.env["CRON_SECRET"];
   if (!cronSecret || req.get("authorization") !== `Bearer ${cronSecret}`) {

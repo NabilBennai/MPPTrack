@@ -62,6 +62,20 @@
     </div>
   </section>
 
+  <!-- Rivalités automatiques -->
+  <section id="rivalry-panel" style="flex-shrink:0;border-radius:14px;border:1px solid rgba(34,197,94,.16);background:linear-gradient(135deg,rgba(34,197,94,.07),rgba(17,24,39,1) 42%);padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div>
+        <h2 class="font-oswald" style="margin:0;color:#F1F5F9;font-size:17px;letter-spacing:.08em">RIVALITÉS 24H</h2>
+        <p id="rivalry-period" style="margin:2px 0 0;color:#64748B;font-size:11px;font-family:'Manrope',sans-serif">Génère un commentaire automatique sur les duels proches.</p>
+      </div>
+      <button onclick="loadRivalryReport()" title="Générer le rapport rivalités"
+        style="padding:7px 12px;border-radius:9px;border:1px solid rgba(34,197,94,.28);background:rgba(34,197,94,.10);color:#86EFAC;cursor:pointer;font-size:12px;font-weight:800;font-family:'Manrope',sans-serif;letter-spacing:.01em">🎙️ Générer le rapport</button>
+    </div>
+    <div id="rivalry-report" style="display:none;margin-top:12px;border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;font-family:'Manrope',sans-serif"></div>
+  </section>
+
+
   <!-- Forme du moment -->
   <section id="form-panel" style="flex-shrink:0;border-radius:14px;border:1px solid rgba(148,163,184,.09);background:#111827;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.25)">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
@@ -269,6 +283,48 @@ async function loadMovements() {
   }
 }
 document.addEventListener('DOMContentLoaded', loadMovements);
+
+
+// ── Rivalités automatiques ───────────────────────────────────────────────
+function rivalryList(items, empty, render) {
+  return items.length ? `<ul style="margin:10px 0 0;padding-left:18px;color:#CBD5E1;font-size:13px;line-height:1.65">${items.map(render).join('')}</ul>` : `<p style="margin:10px 0 0;color:#64748B;font-size:13px">${empty}</p>`;
+}
+function renderRivalryReport(data) {
+  const duels = Array.isArray(data.tightDuels) ? data.tightDuels : [];
+  const overtakes = Array.isArray(data.overtakes) ? data.overtakes : [];
+  const chasers = Array.isArray(data.hotChasers) ? data.hotChasers : [];
+  return `<div style="display:flex;align-items:flex-start;gap:10px">
+    <div style="font-size:24px;line-height:1">🎙️</div>
+    <div style="min-width:0;flex:1">
+      <strong style="display:block;color:#F1F5F9;font-size:15px;margin-bottom:6px">Le commentaire du jour</strong>
+      <p style="margin:0;color:#E2E8F0;font-size:14px;line-height:1.55">${escMovementHtml(data.headline || 'Le classement se tient en respect aujourd’hui.')}</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" style="margin-top:14px">
+        <div><strong style="color:#86EFAC;font-size:12px;text-transform:uppercase;letter-spacing:.08em">Duels serrés</strong>${rivalryList(duels, 'Aucun duel proche détecté.', d => `<li><b>${escMovementHtml(d.chaser)}</b> chasse ${escMovementHtml(d.leader)} : ${d.gap} pt${Number(d.gap) > 1 ? 's' : ''} d’écart (#${d.chaserRank} → #${d.leaderRank}).</li>`)}</div>
+        <div><strong style="color:#93C5FD;font-size:12px;text-transform:uppercase;letter-spacing:.08em">Dépassements</strong>${rivalryList(overtakes, 'Pas de dépassement sur la fenêtre.', o => `<li><b>${escMovementHtml(o.pseudo)}</b> passe de #${o.previousRank} à #${o.currentRank} (${fmtSigned(o.rankDelta)} rang, ${fmtSigned(o.pointsDelta)} pts).</li>`)}</div>
+        <div><strong style="color:#FDE68A;font-size:12px;text-transform:uppercase;letter-spacing:.08em">Joueurs chauds</strong>${rivalryList(chasers, 'Aucun gain de points notable.', c => `<li><b>${escMovementHtml(c.pseudo)}</b> engrange ${fmtSigned(c.pointsDelta)} pts et pointe #${c.currentRank}.</li>`)}</div>
+      </div>
+    </div>
+  </div>`;
+}
+async function loadRivalryReport() {
+  const box = document.getElementById('rivalry-report');
+  const period = document.getElementById('rivalry-period');
+  if (!box) return;
+  box.style.display = 'block';
+  box.innerHTML = `<div style="color:#64748B;font-size:13px">Le consultant chauffe sa voix…</div>`;
+  try {
+    const response = await fetch('/api/rivalry-report?hours=24');
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json();
+    period.textContent = data.previousCapturedAt && data.currentCapturedAt
+      ? `Rapport basé sur ${fmtMovementDate(data.previousCapturedAt)} → ${fmtMovementDate(data.currentCapturedAt)}.`
+      : 'Deux snapshots sont nécessaires pour un rapport complet.';
+    box.innerHTML = renderRivalryReport(data);
+  } catch (_err) {
+    period.textContent = 'Rapport rivalités indisponible pour le moment.';
+    box.innerHTML = `<div style="color:#EF4444;font-size:13px">Impossible de générer le rapport rivalités.</div>`;
+  }
+}
 
 // ── Forme du moment ─────────────────────────────────────────────────────
 function formLabel(period) { return period === '7d' ? '7 jours' : period; }

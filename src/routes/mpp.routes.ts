@@ -12,6 +12,7 @@ import {
   mppHistoryDataHandler,
   mppFormRankingHandler,
   mppMovementsHandler,
+  mppRivalryReportHandler,
   mppSnapshotCronHandler,
 } from "../controllers/mpp.controller.js";
 
@@ -21,6 +22,7 @@ router.get("/",                    mppIndexHandler);
 router.get("/history",             mppHistoryPageHandler);
 router.get("/api/history",         mppHistoryDataHandler);
 router.get("/api/movements",       mppMovementsHandler);
+router.get("/api/rivalry-report",  mppRivalryReportHandler);
 router.get("/api/form-ranking",    mppFormRankingHandler);
 router.get("/api/cron/snapshot",   mppSnapshotCronHandler);
 router.get("/classement",          mppClassementHandler);
