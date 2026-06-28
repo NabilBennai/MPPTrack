@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Duel · MPP Track</title>
+  <link rel="stylesheet" href="/css/output.css">
+</head>
+<body style="min-height:100dvh;background:#0C1320;color:#F1F5F9;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased">
+<header style="position:sticky;top:0;z-index:20;background:#111827;border-bottom:1px solid rgba(148,163,184,.09)">
+  <div class="px-5 sm:px-8" style="height:56px;display:flex;align-items:center;gap:16px">
+    <a href="/" style="display:flex;align-items:center;gap:11px;text-decoration:none"><div style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.28)">⚽</div><span class="font-oswald" style="font-size:20px;font-weight:700;letter-spacing:.14em;color:#F1F5F9">MPP<span style="color:#22C55E">TRACK</span></span></a>
+    <nav style="display:flex;gap:3px;margin-left:4px">
+      <a href="/" style="padding:5px 10px;border-radius:7px;color:#475569;text-decoration:none;font-size:12px;font-weight:700">Classement</a>
+      <a href="/history" style="padding:5px 10px;border-radius:7px;color:#475569;text-decoration:none;font-size:12px;font-weight:700">Historique</a>
+      <a href="/duel" aria-current="page" style="padding:5px 10px;border-radius:7px;color:#F1F5F9;background:rgba(255,255,255,.06);text-decoration:none;font-size:12px;font-weight:700">Duel</a>
+    </nav>
+  </div>
+</header>
+<main class="px-5 sm:px-8" style="max-width:1180px;margin:0 auto;padding-top:22px;padding-bottom:48px">
+  <section style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:18px;padding:14px;border:1px solid rgba(148,163,184,.09);border-radius:14px;background:#111827">
+    <label style="font-size:11px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Joueur A<br><input id="playerA" placeholder="player_id" style="margin-top:5px;border-radius:8px;padding:8px 10px;background:#0C1320;border:1px solid rgba(148,163,184,.14);color:#F1F5F9"></label>
+    <label style="font-size:11px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Joueur B<br><input id="playerB" placeholder="player_id" style="margin-top:5px;border-radius:8px;padding:8px 10px;background:#0C1320;border:1px solid rgba(148,163,184,.14);color:#F1F5F9"></label>
+    <label style="font-size:11px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Période<br><select id="period" style="margin-top:5px;border-radius:8px;padding:8px 10px;background:#0C1320;border:1px solid rgba(148,163,184,.14);color:#F1F5F9"><option value="24h">24h</option><option value="7d">7 jours</option><option value="30d" selected>30 jours</option><option value="90d">90 jours</option></select></label>
+    <button onclick="loadDuel()" style="padding:9px 16px;border-radius:9px;border:0;background:#22C55E;color:#0C1320;font-weight:900;cursor:pointer">Comparer</button>
+    <span id="status" style="font-size:12px;color:#64748B"></span>
+  </section>
+  <section id="cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:16px"></section>
+  <section id="delta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:16px"></section>
+  <section style="border:1px solid rgba(148,163,184,.09);border-radius:16px;background:#111827;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px"><h1 class="font-oswald" style="font-size:22px;letter-spacing:.05em">ÉVOLUTIONS DU DUEL</h1><div id="meta" style="font-size:11px;color:#475569;font-weight:700"></div></div>
+    <div id="charts" style="display:grid;gap:14px"></div>
+  </section>
+</main>
+<script>
+const params = new URLSearchParams(location.search);
+const colors = ['#22C55E', '#A855F7'];
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const fmt = new Intl.NumberFormat('fr-FR');
+playerA.value = params.get('playerA') || '';
+playerB.value = params.get('playerB') || '';
+period.value = params.get('period') || '30d';
+function signed(v, suffix='') { return (v > 0 ? '+' : '') + fmt.format(v || 0) + suffix; }
+function card(p, i) { return `<article style="border:1px solid ${colors[i]}55;border-radius:14px;background:#111827;padding:16px"><p style="font-size:11px;color:${colors[i]};font-weight:900;text-transform:uppercase;letter-spacing:.1em">Joueur ${i+1}</p><h2 class="font-oswald" style="font-size:25px;margin:4px 0 12px">${esc(p.pseudo)}</h2><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:12px;color:#94A3B8"><b>Points <span style="color:#F1F5F9">${fmt.format(p.currentPoints)}</span></b><b>Global <span style="color:#F1F5F9">#${p.currentGlobalRank}</span></b><b>Dépt. <span style="color:#F1F5F9">#${p.currentEscmRank}</span></b><b>Exacts <span style="color:#F1F5F9">${fmt.format(p.exactScores)}</span></b><b>Bons <span style="color:#F1F5F9">${fmt.format(p.goodResults)}</span></b><b>Joués <span style="color:#F1F5F9">${fmt.format(p.playedPredictions)}</span></b></div></article>`; }
+function deltaCard(label, a, b, suffix='') { return `<div style="border:1px solid rgba(148,163,184,.09);border-radius:12px;background:#111827;padding:13px"><div style="font-size:10px;color:#475569;font-weight:900;text-transform:uppercase;letter-spacing:.1em">${label}</div><div style="margin-top:7px;display:flex;justify-content:space-between;font:700 18px Oswald,sans-serif"><span style="color:${colors[0]}">${signed(a, suffix)}</span><span style="color:${colors[1]}">${signed(b, suffix)}</span></div></div>`; }
+function chart(title, key, data, rank=false) {
+  const pts = data.flatMap(s => s.positions.map(p => p[key])); if (!pts.length) return '';
+  const W=900,H=250,PL=48,PR=22,PT=22,PB=34,min=Math.min(...pts),max=Math.max(...pts),span=Math.max(max-min,1),len=Math.max(...data.map(s=>s.positions.length),2);
+  const x=i=>PL+(i/Math.max(len-1,1))*(W-PL-PR), y=v=>PT+((rank ? v-min : max-v)/span)*(H-PT-PB);
+  const lines = data.map((s, si) => { const d=s.positions.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(p[key]).toFixed(1)).join(' '); return `<path d="${d}" fill="none" stroke="${colors[si]}" stroke-width="3"/><circle cx="${x(s.positions.length-1)}" cy="${y(s.positions.at(-1)[key])}" r="5" fill="${colors[si]}"><title>${esc(s.pseudo)}</title></circle>`; }).join('');
+  return `<div style="border:1px solid rgba(148,163,184,.09);border-radius:12px;background:#0C1320;padding:12px"><h3 style="font-size:13px;color:#94A3B8;font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${title}</h3><svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto"><line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="rgba(148,163,184,.2)"/><line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="rgba(148,163,184,.2)"/><text x="8" y="${PT+5}" fill="#475569" font-size="11">${rank?'#':''}${fmt.format(rank?min:max)}</text><text x="8" y="${H-PB}" fill="#475569" font-size="11">${rank?'#':''}${fmt.format(rank?max:min)}</text>${lines}</svg></div>`;
+}
+async function loadDuel() {
+  status.textContent = 'Chargement…'; cards.innerHTML = delta.innerHTML = charts.innerHTML = '';
+  const q = new URLSearchParams({ playerA: playerA.value.trim(), playerB: playerB.value.trim(), period: period.value });
+  history.replaceState(null, '', '/duel?' + q.toString());
+  const res = await fetch('/api/duel?' + q.toString()); const data = await res.json();
+  if (!res.ok) { status.textContent = data.error || 'Erreur'; return; }
+  if (data.series.length < 2) { status.textContent = 'Historique insuffisant pour ces deux joueurs.'; return; }
+  status.textContent = '';
+  cards.innerHTML = data.series.map(card).join('');
+  delta.innerHTML = deltaCard('Delta points', data.series[0].currentPoints - data.series[0].lastSnapshotPoints, data.series[1].currentPoints - data.series[1].lastSnapshotPoints, ' pts') + deltaCard('Delta rang global', data.series[0].globalRankChange, data.series[1].globalRankChange) + deltaCard('Delta rang département', data.series[0].escmRankChange, data.series[1].escmRankChange);
+  meta.textContent = `${data.snapshotCount} snapshots · dernier ${data.lastCapturedAt ? new Date(data.lastCapturedAt).toLocaleString('fr-FR') : '—'}`;
+  charts.innerHTML = chart('Évolution des points', 'points', data.series) + chart('Évolution du rang global', 'globalRank', data.series, true) + chart('Évolution du rang département', 'escmRank', data.series, true);
+}
+if (playerA.value && playerB.value) loadDuel();
+</script>
+</body>
+</html>

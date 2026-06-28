@@ -24,6 +24,7 @@ import {
   captureStandingsSnapshot,
   getHistoryDashboard,
   getStandingsMovements,
+  getDuelHistory,
 } from "../services/history/standings-history.service.js";
 
 function isDev(): boolean {
@@ -47,6 +48,22 @@ export async function mppIndexHandler(_req: Request, res: Response): Promise<voi
 
 export async function mppHistoryPageHandler(_req: Request, res: Response): Promise<void> {
   res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "history.html"));
+}
+
+export async function mppDuelPageHandler(_req: Request, res: Response): Promise<void> {
+  res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "duel.html"));
+}
+
+export async function mppDuelDataHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const playerA = typeof req.query["playerA"] === "string" ? req.query["playerA"] : "";
+    const playerB = typeof req.query["playerB"] === "string" ? req.query["playerB"] : "";
+    const period = typeof req.query["period"] === "string" ? req.query["period"] : "30d";
+    res.json(await getDuelHistory(playerA, playerB, period));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Duel indisponible.";
+    res.status(400).json({ error: message });
+  }
 }
 
 export async function mppHistoryDataHandler(req: Request, res: Response): Promise<void> {
