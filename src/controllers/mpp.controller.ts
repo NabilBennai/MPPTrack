@@ -51,13 +51,46 @@ export async function mppHistoryPageHandler(_req: Request, res: Response): Promi
 
 export async function mppHistoryDataHandler(req: Request, res: Response): Promise<void> {
   try {
+    const period = typeof req.query["period"] === "string" ? req.query["period"] : undefined;
     const days = typeof req.query["days"] === "string" ? Number(req.query["days"]) : 7;
     const players = typeof req.query["players"] === "string"
       ? req.query["players"].split(",").map((value) => value.trim()).filter(Boolean)
       : [];
-    res.json(await getHistoryDashboard(days, players));
+    res.json(await getHistoryDashboard(period ?? days, players));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Historique indisponible.";
+    res.status(500).json({ error: message });
+  }
+}
+
+export async function mppFormRankingHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const period = typeof req.query["period"] === "string" ? req.query["period"] : "24h";
+    const dashboard = await getHistoryDashboard(period);
+    res.json({
+      contestTitle: dashboard.contestTitle,
+      firstCapturedAt: dashboard.firstCapturedAt,
+      lastCapturedAt: dashboard.lastCapturedAt,
+      snapshotCount: dashboard.snapshotCount,
+      playerCount: dashboard.playerCount,
+      period,
+      ranking: dashboard.series
+        .filter((player) => player.positions.length >= 2)
+        .sort((a, b) => b.pointsChange - a.pointsChange || a.currentEscmRank - b.currentEscmRank)
+        .map((player, index) => ({
+          rank: index + 1,
+          playerId: player.playerId,
+          pseudo: player.pseudo,
+          currentEscmRank: player.currentEscmRank,
+          currentGlobalRank: player.currentGlobalRank,
+          currentPoints: player.currentPoints,
+          pointsChange: player.pointsChange,
+          firstSnapshotPoints: player.positions[0]?.points ?? 0,
+          lastSnapshotPoints: player.positions[player.positions.length - 1]?.points ?? 0,
+        })),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Forme indisponible.";
     res.status(500).json({ error: message });
   }
 }
