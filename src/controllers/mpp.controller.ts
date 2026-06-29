@@ -54,6 +54,18 @@ export async function mppDuelPageHandler(_req: Request, res: Response): Promise<
   res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "duel.html"));
 }
 
+export async function mppMovementsPageHandler(_req: Request, res: Response): Promise<void> {
+  res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "movements.html"));
+}
+
+export async function mppRivalriesPageHandler(_req: Request, res: Response): Promise<void> {
+  res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "rivalries.html"));
+}
+
+export async function mppFormPageHandler(_req: Request, res: Response): Promise<void> {
+  res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "form.html"));
+}
+
 export async function mppDuelDataHandler(req: Request, res: Response): Promise<void> {
   try {
     const playerA = typeof req.query["playerA"] === "string" ? req.query["playerA"] : "";

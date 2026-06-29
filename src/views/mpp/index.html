@@ -17,10 +17,14 @@
       <span class="font-oswald" style="font-size:20px;font-weight:700;letter-spacing:0.14em;color:#F1F5F9;user-select:none">MPP<span style="color:#22C55E">TRACK</span></span>
     </div>
     <div class="app-header-actions" style="margin-left:auto;display:flex;align-items:center;gap:8px">
-      <a href="/history"
-        style="font-size:12px;padding:5px 13px;border-radius:99px;border:1px solid rgba(148,163,184,.12);color:#94A3B8;background:rgba(255,255,255,.04);text-decoration:none;font-family:'Manrope',sans-serif;font-weight:700;transition:all .15s"
-        onmouseover="this.style.color='#F1F5F9';this.style.borderColor='rgba(148,163,184,.24)';this.style.background='rgba(255,255,255,.08)'"
-        onmouseout="this.style.color='#94A3B8';this.style.borderColor='rgba(148,163,184,.12)';this.style.background='rgba(255,255,255,.04)'">Historique</a>
+      <nav style="display:flex;gap:3px;flex-wrap:wrap">
+        <a href="/" aria-current="page" style="padding:5px 10px;border-radius:7px;color:#F1F5F9;background:rgba(255,255,255,.06);text-decoration:none;font-size:12px;font-weight:700">Classement</a>
+        <a href="/movements" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Mouvements</a>
+        <a href="/rivalries" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Rivalités</a>
+        <a href="/form" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Forme</a>
+        <a href="/history" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Historique</a>
+        <a href="/duel" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Duel</a>
+      </nav>
       <span id="cache-status" style="font-size:11px;color:#475569"></span>
       <button id="btn-refresh"
         style="font-size:12px;padding:5px 13px;border-radius:99px;border:1px solid rgba(148,163,184,.12);color:#94A3B8;background:rgba(255,255,255,.04);cursor:pointer;transition:all .15s;font-family:'Manrope',sans-serif;font-weight:600"
@@ -44,62 +48,6 @@
     </div>
   </div>
 
-
-  <!-- Mouvements 24h -->
-  <section id="movements-panel" style="flex-shrink:0;border-radius:14px;border:1px solid rgba(148,163,184,.09);background:#111827;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.25)">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
-      <div>
-        <h2 class="font-oswald" style="margin:0;color:#F1F5F9;font-size:17px;letter-spacing:.08em">MOUVEMENTS 24H</h2>
-        <p id="movements-period" style="margin:2px 0 0;color:#475569;font-size:11px;font-family:'Manrope',sans-serif">Comparaison des snapshots sur 24h glissantes…</p>
-      </div>
-      <button onclick="loadMovements()" title="Rafraîchir les mouvements"
-        style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(148,163,184,.12);background:rgba(255,255,255,.04);color:#94A3B8;cursor:pointer">↺</button>
-    </div>
-    <div id="movements-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div style="height:118px;border-radius:12px" class="shimmer"></div>
-      <div style="height:118px;border-radius:12px;animation-delay:.12s" class="shimmer"></div>
-      <div style="height:118px;border-radius:12px;animation-delay:.24s" class="shimmer"></div>
-    </div>
-  </section>
-
-  <!-- Rivalités automatiques -->
-  <section id="rivalry-panel" style="flex-shrink:0;border-radius:14px;border:1px solid rgba(34,197,94,.16);background:linear-gradient(135deg,rgba(34,197,94,.07),rgba(17,24,39,1) 42%);padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.25)">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-      <div>
-        <h2 class="font-oswald" style="margin:0;color:#F1F5F9;font-size:17px;letter-spacing:.08em">RIVALITÉS 24H</h2>
-        <p id="rivalry-period" style="margin:2px 0 0;color:#64748B;font-size:11px;font-family:'Manrope',sans-serif">Génère un commentaire automatique sur les duels proches.</p>
-      </div>
-      <button onclick="loadRivalryReport()" title="Générer le rapport rivalités"
-        style="padding:7px 12px;border-radius:9px;border:1px solid rgba(34,197,94,.28);background:rgba(34,197,94,.10);color:#86EFAC;cursor:pointer;font-size:12px;font-weight:800;font-family:'Manrope',sans-serif;letter-spacing:.01em">🎙️ Générer le rapport</button>
-    </div>
-    <div id="rivalry-report" style="display:none;margin-top:12px;border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;font-family:'Manrope',sans-serif"></div>
-  </section>
-
-
-  <!-- Forme du moment -->
-  <section id="form-panel" style="flex-shrink:0;border-radius:14px;border:1px solid rgba(148,163,184,.09);background:#111827;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.25)">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <div>
-        <h2 class="font-oswald" style="margin:0;color:#F1F5F9;font-size:17px;letter-spacing:.08em">FORME DU MOMENT</h2>
-        <p id="form-period" style="margin:2px 0 0;color:#475569;font-size:11px;font-family:'Manrope',sans-serif">Gains de points sur la période sélectionnée…</p>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <select id="form-period-select" onchange="loadFormRanking(this.value)"
-          style="border-radius:8px;padding:5px 9px;font-size:12px;font-family:'Manrope',sans-serif;cursor:pointer;outline:none;background:#0C1320;color:#94A3B8;border:1px solid rgba(148,163,184,.12)">
-          <option value="24h">24h</option>
-          <option value="48h">48h</option>
-          <option value="7d">7 jours</option>
-        </select>
-        <button onclick="loadFormRanking(document.getElementById('form-period-select')?.value || '24h')" title="Rafraîchir la forme"
-          style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(148,163,184,.12);background:rgba(255,255,255,.04);color:#94A3B8;cursor:pointer">↺</button>
-      </div>
-    </div>
-    <div id="form-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div style="height:104px;border-radius:12px" class="shimmer"></div>
-      <div style="height:104px;border-radius:12px;animation-delay:.12s" class="shimmer"></div>
-      <div style="height:104px;border-radius:12px;animation-delay:.24s" class="shimmer"></div>
-    </div>
-  </section>
 
   <!-- Classement section -->
   <div class="ranking-section" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0">
@@ -222,149 +170,6 @@
 </div>
 
 <script>
-// ── Mouvements 24h ───────────────────────────────────────────────────────
-function fmtRank(value) { return value === null || value === undefined ? '—' : '#' + value; }
-function fmtPoints(value) { return value === null || value === undefined ? '—' : String(value); }
-function fmtSigned(value) { return value > 0 ? '+' + value : String(value); }
-function fmtMovementDate(value) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-}
-function escMovementHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function movementCard(title, item, mode) {
-  if (!item) {
-    return `<article style="border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;color:#64748B;font-size:13px;font-family:'Manrope',sans-serif">
-      <strong style="display:block;color:#F1F5F9;margin-bottom:12px">${title}</strong>Aucune donnée disponible.
-    </article>`;
-  }
-  const isPoints = mode === 'points';
-  const delta = isPoints ? item.pointsDelta : item.rankDelta;
-  const color = delta >= 0 ? '#22C55E' : '#EF4444';
-  const previous = isPoints ? fmtPoints(item.previousPoints) : fmtRank(item.previousDepartmentRank);
-  const current = isPoints ? fmtPoints(item.currentPoints) : fmtRank(item.currentDepartmentRank);
-  const label = isPoints ? 'points' : 'rang dép.';
-  return `<article style="border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;font-family:'Manrope',sans-serif">
-    <strong style="display:block;color:#F1F5F9;font-size:13px;margin-bottom:10px">${title}</strong>
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
-      <span style="color:#E2E8F0;font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escMovementHtml(item.pseudo)}</span>
-      <span style="color:${color};font-weight:900;font-size:18px">${fmtSigned(delta)}</span>
-    </div>
-    <div style="margin-top:8px;color:#94A3B8;font-size:12px">${label} : ${previous} → ${current}</div>
-    <div style="margin-top:4px;color:#475569;font-size:11px">Global : ${fmtRank(item.previousGlobalRank)} → ${fmtRank(item.currentGlobalRank)} · Points : ${fmtPoints(item.previousPoints)} → ${fmtPoints(item.currentPoints)}</div>
-  </article>`;
-}
-async function loadMovements() {
-  const grid = document.getElementById('movements-grid');
-  const period = document.getElementById('movements-period');
-  if (!grid) return;
-  try {
-    const response = await fetch('/api/movements?hours=24');
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const data = await response.json();
-    const movements = Array.isArray(data.movements) ? data.movements : [];
-    const eligibleRanks = movements.filter(m => m.previousDepartmentRank !== null && m.currentDepartmentRank !== null);
-    const eligiblePoints = movements.filter(m => m.previousPoints !== null && m.currentPoints !== null);
-    const topProgression = [...eligibleRanks].sort((a, b) => b.rankDelta - a.rankDelta)[0];
-    const topChute = [...eligibleRanks].sort((a, b) => a.rankDelta - b.rankDelta)[0];
-    const topPoints = [...eligiblePoints].sort((a, b) => b.pointsDelta - a.pointsDelta)[0];
-    period.textContent = data.previousCapturedAt && data.currentCapturedAt
-      ? `Snapshots comparés : ${fmtMovementDate(data.previousCapturedAt)} → ${fmtMovementDate(data.currentCapturedAt)} (${data.windowHours || 24}h glissantes)`
-      : 'Deux snapshots sont nécessaires pour calculer les mouvements 24h.';
-    grid.innerHTML = [
-      movementCard('Top progression', topProgression, 'rank'),
-      movementCard('Top chute', topChute, 'rank'),
-      movementCard('Plus gros gain de points', topPoints, 'points'),
-    ].join('');
-  } catch (_err) {
-    period.textContent = 'Mouvements indisponibles pour le moment.';
-    grid.innerHTML = `<div style="grid-column:1/-1;color:#EF4444;border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px;background:rgba(239,68,68,.06);font-size:13px;font-family:'Manrope',sans-serif">Erreur lors du chargement des mouvements.</div>`;
-  }
-}
-document.addEventListener('DOMContentLoaded', loadMovements);
-
-
-// ── Rivalités automatiques ───────────────────────────────────────────────
-function rivalryList(items, empty, render) {
-  return items.length ? `<ul style="margin:10px 0 0;padding-left:18px;color:#CBD5E1;font-size:13px;line-height:1.65">${items.map(render).join('')}</ul>` : `<p style="margin:10px 0 0;color:#64748B;font-size:13px">${empty}</p>`;
-}
-function renderRivalryReport(data) {
-  const duels = Array.isArray(data.tightDuels) ? data.tightDuels : [];
-  const overtakes = Array.isArray(data.overtakes) ? data.overtakes : [];
-  const chasers = Array.isArray(data.hotChasers) ? data.hotChasers : [];
-  return `<div style="display:flex;align-items:flex-start;gap:10px">
-    <div style="font-size:24px;line-height:1">🎙️</div>
-    <div style="min-width:0;flex:1">
-      <strong style="display:block;color:#F1F5F9;font-size:15px;margin-bottom:6px">Le commentaire du jour</strong>
-      <p style="margin:0;color:#E2E8F0;font-size:14px;line-height:1.55">${escMovementHtml(data.headline || 'Le classement se tient en respect aujourd’hui.')}</p>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" style="margin-top:14px">
-        <div><strong style="color:#86EFAC;font-size:12px;text-transform:uppercase;letter-spacing:.08em">Duels serrés</strong>${rivalryList(duels, 'Aucun duel proche détecté.', d => `<li><b>${escMovementHtml(d.chaser)}</b> chasse ${escMovementHtml(d.leader)} : ${d.gap} pt${Number(d.gap) > 1 ? 's' : ''} d’écart (#${d.chaserRank} → #${d.leaderRank}).</li>`)}</div>
-        <div><strong style="color:#93C5FD;font-size:12px;text-transform:uppercase;letter-spacing:.08em">Dépassements</strong>${rivalryList(overtakes, 'Pas de dépassement sur la fenêtre.', o => `<li><b>${escMovementHtml(o.pseudo)}</b> passe de #${o.previousRank} à #${o.currentRank} (${fmtSigned(o.rankDelta)} rang, ${fmtSigned(o.pointsDelta)} pts).</li>`)}</div>
-        <div><strong style="color:#FDE68A;font-size:12px;text-transform:uppercase;letter-spacing:.08em">Joueurs chauds</strong>${rivalryList(chasers, 'Aucun gain de points notable.', c => `<li><b>${escMovementHtml(c.pseudo)}</b> engrange ${fmtSigned(c.pointsDelta)} pts et pointe #${c.currentRank}.</li>`)}</div>
-      </div>
-    </div>
-  </div>`;
-}
-async function loadRivalryReport() {
-  const box = document.getElementById('rivalry-report');
-  const period = document.getElementById('rivalry-period');
-  if (!box) return;
-  box.style.display = 'block';
-  box.innerHTML = `<div style="color:#64748B;font-size:13px">Le consultant chauffe sa voix…</div>`;
-  try {
-    const response = await fetch('/api/rivalry-report?hours=24');
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const data = await response.json();
-    period.textContent = data.previousCapturedAt && data.currentCapturedAt
-      ? `Rapport basé sur ${fmtMovementDate(data.previousCapturedAt)} → ${fmtMovementDate(data.currentCapturedAt)}.`
-      : 'Deux snapshots sont nécessaires pour un rapport complet.';
-    box.innerHTML = renderRivalryReport(data);
-  } catch (_err) {
-    period.textContent = 'Rapport rivalités indisponible pour le moment.';
-    box.innerHTML = `<div style="color:#EF4444;font-size:13px">Impossible de générer le rapport rivalités.</div>`;
-  }
-}
-
-// ── Forme du moment ─────────────────────────────────────────────────────
-function formLabel(period) { return period === '7d' ? '7 jours' : period; }
-function formCard(item) {
-  if (!item) {
-    return `<article style="border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;color:#64748B;font-size:13px;font-family:'Manrope',sans-serif">Aucune donnée disponible.</article>`;
-  }
-  const delta = Number(item.pointsChange || 0);
-  const color = delta >= 0 ? '#22C55E' : '#EF4444';
-  return `<article style="border-radius:12px;border:1px solid rgba(148,163,184,.09);background:#0C1320;padding:14px;font-family:'Manrope',sans-serif">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
-      <span style="color:#E2E8F0;font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">#${item.rank} ${escMovementHtml(item.pseudo)}</span>
-      <span style="color:${color};font-weight:900;font-size:18px">${fmtSigned(delta)}</span>
-    </div>
-    <div style="margin-top:8px;color:#94A3B8;font-size:12px">Points : ${fmtPoints(item.firstSnapshotPoints)} → ${fmtPoints(item.lastSnapshotPoints)}</div>
-    <div style="margin-top:4px;color:#475569;font-size:11px">Rang e-SCM actuel : ${fmtRank(item.currentEscmRank)} · Global : ${fmtRank(item.currentGlobalRank)}</div>
-  </article>`;
-}
-async function loadFormRanking(periodValue) {
-  const period = periodValue || '24h';
-  const grid = document.getElementById('form-grid');
-  const label = document.getElementById('form-period');
-  if (!grid) return;
-  try {
-    const response = await fetch('/api/form-ranking?period=' + encodeURIComponent(period));
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const data = await response.json();
-    const ranking = Array.isArray(data.ranking) ? data.ranking : [];
-    label.textContent = data.firstCapturedAt && data.lastCapturedAt
-      ? `Top gains de points sur ${formLabel(period)} : ${fmtMovementDate(data.firstCapturedAt)} → ${fmtMovementDate(data.lastCapturedAt)}`
-      : `Deux snapshots sont nécessaires pour calculer la forme sur ${formLabel(period)}.`;
-    grid.innerHTML = ranking.slice(0, 3).map(formCard).join('') || [null, null, null].map(formCard).join('');
-  } catch (_err) {
-    label.textContent = 'Forme indisponible pour le moment.';
-    grid.innerHTML = `<div style="grid-column:1/-1;color:#EF4444;border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px;background:rgba(239,68,68,.06);font-size:13px;font-family:'Manrope',sans-serif">Erreur lors du chargement de la forme.</div>`;
-  }
-}
-document.addEventListener('DOMContentLoaded', () => loadFormRanking('24h'));
-
-
 // ── Dept filter pills ─────────────────────────────────────────────────────
 function setActivePill(dept) {
   document.querySelectorAll('.dept-tab').forEach(p => {
