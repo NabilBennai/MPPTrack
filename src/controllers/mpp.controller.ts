@@ -263,6 +263,72 @@ export async function mppRivalryReportHandler(req: Request, res: Response): Prom
   }
 }
 
+
+export async function mppGigaExportDataHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const players = await getMppClassement();
+    const escmPlayers = players
+      .filter((player) => player.departmentCode === "ES")
+      .sort((a, b) => a.rank - b.rank);
+    const distributions = computeDepartmentPointDistributions(players);
+    const escmDistribution = distributions.find((distribution) => distribution.departmentCode === "ES") ?? null;
+    const stats = computeDepartmentStats(players);
+    const movements = await getStandingsMovements(24).catch(() => null);
+    const contestInfo = useMock() ? null : await getContestInfo().catch(() => null);
+
+    const movementRows = movements?.movements ?? [];
+    const activeMovements = movementRows.filter((movement) => movement.pointsDelta !== 0 || movement.rankDelta !== 0);
+    const positiveMovements = movementRows.filter((movement) => movement.pointsDelta > 0);
+    const topProgressions = [...movementRows]
+      .filter((movement) => movement.currentDepartmentRank !== null)
+      .sort((a, b) => b.pointsDelta - a.pointsDelta || b.rankDelta - a.rankDelta)
+      .slice(0, 8);
+    const topRankGains = [...movementRows]
+      .filter((movement) => movement.currentDepartmentRank !== null && movement.rankDelta > 0)
+      .sort((a, b) => b.rankDelta - a.rankDelta || b.pointsDelta - a.pointsDelta)
+      .slice(0, 12);
+    const topRankDrops = [...movementRows]
+      .filter((movement) => movement.currentDepartmentRank !== null && movement.rankDelta < 0)
+      .sort((a, b) => a.rankDelta - b.rankDelta || a.pointsDelta - b.pointsDelta)
+      .slice(0, 8);
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      contestTitle: contestInfo?.title ?? movements?.contestTitle ?? "MPP",
+      totalPlayers: players.length,
+      escmPlayerCount: escmPlayers.length,
+      escmRanking: escmPlayers.slice(0, 30).map((player, index) => ({
+        escmRank: index + 1,
+        globalRank: player.rank,
+        pseudo: player.pseudo,
+        points: player.points,
+        goodResults: player.goodResults ?? 0,
+        exactScores: player.exactScores ?? 0,
+        playedPredictions: player.playedPredictions ?? 0,
+      })),
+      distributions,
+      escmDistribution,
+      departmentStats: stats,
+      progress24h: {
+        previousCapturedAt: movements?.previousCapturedAt ?? null,
+        currentCapturedAt: movements?.currentCapturedAt ?? null,
+        playerCount: movements?.playerCount ?? 0,
+        activePlayers: activeMovements.length,
+        scorers: positiveMovements.length,
+        totalPointsDelta: positiveMovements.reduce((sum, movement) => sum + movement.pointsDelta, 0),
+        bestPointsDelta: topProgressions[0]?.pointsDelta ?? 0,
+        bestRankDelta: topRankGains[0]?.rankDelta ?? 0,
+        topProgressions,
+        topRankGains,
+        topRankDrops,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Export PNG indisponible.";
+    res.status(500).json({ error: message });
+  }
+}
+
 export async function mppSnapshotCronHandler(req: Request, res: Response): Promise<void> {
   const cronSecret = process.env["CRON_SECRET"];
   if (!cronSecret || req.get("authorization") !== `Bearer ${cronSecret}`) {
