@@ -11,20 +11,20 @@
 
 <!-- ── Header ───────────────────────────────────────────────────────────── -->
 <header style="flex-shrink:0;z-index:20;background:#111827;border-bottom:1px solid rgba(148,163,184,.09)">
-  <div class="app-header-inner px-5 sm:px-8" style="min-height:56px;display:flex;align-items:center;gap:16px">
+  <div class="app-header-inner mpp-header-inner px-5 sm:px-8" style="min-height:56px;display:flex;align-items:center;gap:16px">
     <div style="display:flex;align-items:center;gap:11px">
       <div style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.28)">⚽</div>
       <span class="font-oswald" style="font-size:20px;font-weight:700;letter-spacing:0.14em;color:#F1F5F9;user-select:none">MPP<span style="color:#22C55E">TRACK</span></span>
     </div>
     <div class="app-header-actions" style="margin-left:auto;display:flex;align-items:center;gap:8px">
-      <nav style="display:flex;gap:3px;flex-wrap:wrap">
+      <details class="mpp-nav-menu"><summary class="mpp-nav-toggle" aria-label="Ouvrir le menu de navigation"><span></span><span></span><span></span></summary><nav class="mpp-nav-links" style="display:flex;gap:3px;flex-wrap:wrap">
         <a href="/" aria-current="page" style="padding:5px 10px;border-radius:7px;color:#F1F5F9;background:rgba(255,255,255,.06);text-decoration:none;font-size:12px;font-weight:700">Classement</a>
         <a href="/movements" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Mouvements</a>
         <a href="/rivalries" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Rivalités</a>
         <a href="/form" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Forme</a>
         <a href="/history" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Historique</a>
         <a href="/duel" style="padding:5px 10px;border-radius:7px;color:#94A3B8;text-decoration:none;font-size:12px;font-weight:700">Duel</a>
-      </nav>
+      </nav></details>
       <span id="cache-status" style="font-size:11px;color:#475569"></span>
       <button id="btn-refresh"
         style="font-size:12px;padding:5px 13px;border-radius:99px;border:1px solid rgba(148,163,184,.12);color:#94A3B8;background:rgba(255,255,255,.04);cursor:pointer;transition:all .15s;font-family:'Manrope',sans-serif;font-weight:600"
