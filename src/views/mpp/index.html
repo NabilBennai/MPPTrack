@@ -105,6 +105,10 @@
           style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(148,163,184,.12);background:rgba(255,255,255,.04);color:#475569;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s"
           onmouseover="this.style.color='#22C55E';this.style.borderColor='rgba(34,197,94,.3)';this.style.background='rgba(34,197,94,.08)'"
           onmouseout="this.style.color='#475569';this.style.borderColor='rgba(148,163,184,.12)';this.style.background='rgba(255,255,255,.04)'">⎘</button>
+        <button onclick="exportGigaPNG(this)" title="Giga export PNG 24h e-SCM"
+          style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(168,85,247,.22);background:rgba(168,85,247,.08);color:#C084FC;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s"
+          onmouseover="this.style.color='#F1F5F9';this.style.borderColor='rgba(168,85,247,.48)';this.style.background='rgba(168,85,247,.16)'"
+          onmouseout="this.style.color='#C084FC';this.style.borderColor='rgba(168,85,247,.22)';this.style.background='rgba(168,85,247,.08)'">PNG</button>
         <button onclick="showKbOverlay()" title="Raccourcis (?)"
           style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(148,163,184,.12);background:rgba(255,255,255,.04);color:#475569;cursor:pointer;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:'Manrope',sans-serif"
           onmouseover="this.style.color='#F1F5F9';this.style.borderColor='rgba(148,163,184,.24)';this.style.background='rgba(255,255,255,.08)'"
@@ -417,6 +421,160 @@ document.getElementById('dept-filters').addEventListener('click', e => {
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'mpp-classement.csv' });
     a.click(); URL.revokeObjectURL(a.href);
     showToast('📥 Export téléchargé !');
+  };
+
+
+  function formatNumber(value) {
+    return Number(value || 0).toLocaleString('fr-FR');
+  }
+
+  function formatShortDate(value) {
+    if (!value) return 'historique indisponible';
+    return new Date(value).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  }
+
+  function drawRoundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function fillRoundRect(ctx, x, y, w, h, r, fill) {
+    drawRoundRect(ctx, x, y, w, h, r);
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+
+  function drawText(ctx, text, x, y, options = {}) {
+    const { color = '#F1F5F9', size = 24, weight = 600, align = 'left', family = 'Arial', maxWidth } = options;
+    ctx.fillStyle = color;
+    ctx.font = `${weight} ${size}px ${family}`;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'top';
+    ctx.fillText(String(text), x, y, maxWidth);
+  }
+
+  function downloadCanvas(canvas, filename) {
+    const a = Object.assign(document.createElement('a'), { href: canvas.toDataURL('image/png'), download: filename });
+    a.click();
+  }
+
+  function drawGigaExport(data) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1800;
+    canvas.height = 2400;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0C1320';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, 'rgba(168,85,247,.24)');
+    grad.addColorStop(.45, 'rgba(34,197,94,.10)');
+    grad.addColorStop(1, 'rgba(59,158,255,.14)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawText(ctx, 'MPP TRACK · GIGA EXPORT PNG', 96, 72, { size: 34, weight: 800, color: '#22C55E' });
+    drawText(ctx, data.contestTitle || 'MPP', 96, 122, { size: 70, weight: 900, maxWidth: 1120 });
+    drawText(ctx, `Résumé e-SCM des dernières 24h · généré le ${formatShortDate(data.generatedAt)}`, 96, 208, { size: 28, color: '#94A3B8' });
+
+    const k = data.progress24h || {};
+    const cards = [
+      ['Joueurs e-SCM', data.escmPlayerCount, `sur ${data.totalPlayers} joueurs`],
+      ['Points gagnés 24h', `+${formatNumber(k.totalPointsDelta)}`, `${k.scorers || 0} scoreurs`],
+      ['Actifs 24h', k.activePlayers || 0, `${k.playerCount || 0} suivis`],
+      ['Meilleur rush', `+${formatNumber(k.bestPointsDelta)}`, `${k.bestRankDelta || 0} place(s) max`],
+    ];
+    cards.forEach((card, i) => {
+      const x = 96 + i * 402;
+      fillRoundRect(ctx, x, 300, 360, 170, 28, 'rgba(17,24,39,.88)');
+      drawText(ctx, card[0], x + 30, 326, { size: 24, color: '#94A3B8', weight: 700 });
+      drawText(ctx, card[1], x + 30, 368, { size: 50, color: i === 1 ? '#22C55E' : '#F1F5F9', weight: 900 });
+      drawText(ctx, card[2], x + 30, 430, { size: 22, color: '#64748B', weight: 600 });
+    });
+
+    fillRoundRect(ctx, 96, 530, 820, 1260, 32, 'rgba(17,24,39,.92)');
+    drawText(ctx, 'Classement e-SCM', 136, 568, { size: 38, weight: 900 });
+    drawText(ctx, 'Top 30 · rang e-SCM · rang général · points', 136, 616, { size: 22, color: '#94A3B8' });
+    (data.escmRanking || []).slice(0, 30).forEach((p, i) => {
+      const y = 670 + i * 35;
+      if (i % 2 === 0) fillRoundRect(ctx, 126, y - 6, 760, 30, 10, 'rgba(255,255,255,.035)');
+      const medal = p.escmRank === 1 ? '🥇' : p.escmRank === 2 ? '🥈' : p.escmRank === 3 ? '🥉' : `#${p.escmRank}`;
+      drawText(ctx, medal, 146, y, { size: 22, weight: 800, color: '#C084FC' });
+      drawText(ctx, p.pseudo, 230, y, { size: 22, weight: 700, maxWidth: 360 });
+      drawText(ctx, `#${p.globalRank} gén.`, 620, y, { size: 20, color: '#64748B', weight: 700 });
+      drawText(ctx, formatNumber(p.points), 860, y, { size: 22, weight: 900, align: 'right' });
+    });
+
+    fillRoundRect(ctx, 956, 530, 748, 580, 32, 'rgba(17,24,39,.92)');
+    drawText(ctx, 'Distribution verticale des points', 996, 568, { size: 34, weight: 900 });
+    const distributions = data.distributions || [];
+    const maxPoint = Math.max(1, ...distributions.flatMap(d => d.points || [d.max || 0]));
+    const colors = { MT: '#3B9EFF', ES: '#A855F7', TD: '#22C55E', WD: '#F97316', UNKNOWN: '#64748B' };
+    distributions.forEach((d, i) => {
+      const x = 1020 + i * 160;
+      const bottom = 1010;
+      const height = 330;
+      ctx.strokeStyle = 'rgba(148,163,184,.16)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x + 40, bottom); ctx.lineTo(x + 40, bottom - height); ctx.stroke();
+      (d.points || []).forEach((pt, idx) => {
+        const yy = bottom - (pt / maxPoint) * height;
+        ctx.fillStyle = colors[d.departmentCode] || '#64748B';
+        ctx.globalAlpha = d.departmentCode === 'ES' ? .95 : .45;
+        ctx.beginPath(); ctx.arc(x + 40 + ((idx % 5) - 2) * 5, yy, d.departmentCode === 'ES' ? 5 : 4, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      drawText(ctx, d.departmentCode, x + 40, 1032, { size: 24, weight: 900, align: 'center', color: colors[d.departmentCode] || '#94A3B8' });
+      drawText(ctx, `med ${formatNumber(d.median)}`, x + 40, 1062, { size: 17, color: '#94A3B8', align: 'center' });
+    });
+
+    fillRoundRect(ctx, 956, 1150, 748, 640, 32, 'rgba(17,24,39,.92)');
+    drawText(ctx, 'Progression 24h', 996, 1188, { size: 34, weight: 900 });
+    drawText(ctx, `${formatShortDate(k.previousCapturedAt)} → ${formatShortDate(k.currentCapturedAt)}`, 996, 1234, { size: 21, color: '#94A3B8' });
+    (k.topProgressions || []).slice(0, 8).forEach((p, i) => {
+      const y = 1300 + i * 50;
+      drawText(ctx, `#${p.currentDepartmentRank || '—'}`, 996, y, { size: 22, color: '#C084FC', weight: 800 });
+      drawText(ctx, p.pseudo, 1060, y, { size: 24, weight: 800, maxWidth: 310 });
+      drawText(ctx, `${p.pointsDelta >= 0 ? '+' : ''}${formatNumber(p.pointsDelta)} pts`, 1540, y, { size: 24, weight: 900, color: p.pointsDelta >= 0 ? '#22C55E' : '#F97316', align: 'right' });
+      drawText(ctx, `${p.rankDelta >= 0 ? '+' : ''}${p.rankDelta} pl.`, 1660, y, { size: 20, color: '#94A3B8', align: 'right' });
+    });
+
+    fillRoundRect(ctx, 96, 1845, 1608, 380, 32, 'rgba(17,24,39,.92)');
+    drawText(ctx, 'Infos utiles équipe', 136, 1884, { size: 34, weight: 900 });
+    const es = data.escmDistribution || {};
+    const stats = (data.departmentStats || []).map(s => `${s.departmentCode}: ${formatNumber(s.totalPoints)} pts (${s.playerCount})`).join('  ·  ');
+    const infoLines = [
+      `e-SCM: min ${formatNumber(es.min)} · Q1 ${formatNumber(es.q1)} · médiane ${formatNumber(es.median)} · Q3 ${formatNumber(es.q3)} · max ${formatNumber(es.max)} · moyenne ${formatNumber(es.mean)}.`,
+      `Totaux départements: ${stats || 'indisponibles'}.`,
+      `Top gains de rang: ${(k.topRankGains || []).slice(0, 5).map(p => `${p.pseudo} +${p.rankDelta}`).join(' · ') || 'aucun dépassement détecté'}.`,
+      `Astuce: les points violets de la distribution représentent e-SCM; les autres départements servent de repère.`
+    ];
+    infoLines.forEach((line, i) => drawText(ctx, line, 136, 1944 + i * 58, { size: 26, color: i === 0 ? '#F1F5F9' : '#94A3B8', weight: 650, maxWidth: 1520 }));
+    drawText(ctx, 'mpptrack · export PNG automatique', 900, 2308, { size: 24, color: '#64748B', align: 'center', weight: 700 });
+    return canvas;
+  }
+
+  window.exportGigaPNG = async function (button) {
+    const original = button?.textContent;
+    try {
+      if (button) { button.disabled = true; button.textContent = '…'; }
+      showToast('🖼️ Préparation du giga export PNG…');
+      const response = await fetch('/api/giga-export');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Export indisponible');
+      const canvas = drawGigaExport(data);
+      downloadCanvas(canvas, `mpp-giga-export-escm-24h-${new Date().toISOString().slice(0,10)}.png`);
+      showToast('✅ Giga export PNG téléchargé !');
+    } catch (error) {
+      showToast('❌ ' + (error?.message || 'Export impossible'));
+    } finally {
+      if (button) { button.disabled = false; button.textContent = original || 'PNG'; }
+    }
   };
 
   window.copyLink = function () {
