@@ -212,6 +212,49 @@ export interface HistoryDashboardData {
   liveDataAvailable: boolean;
 }
 
+export type StandingEventType =
+  | "leader_changed"
+  | "best_points_gain"
+  | "biggest_rank_gain"
+  | "biggest_rank_drop"
+  | "tight_gap";
+
+export type StandingEventSeverity = "info" | "success" | "warning" | "danger";
+
+export interface StandingEvent {
+  type: StandingEventType;
+  capturedAt: string;
+  playerId: string;
+  pseudo: string;
+  message: string;
+  severity: StandingEventSeverity;
+  previousPlayerId?: string;
+  previousPseudo?: string;
+  rank?: number;
+  previousRank?: number;
+  currentRank?: number;
+  rankDelta?: number;
+  points?: number;
+  previousPoints?: number;
+  currentPoints?: number;
+  pointsDelta?: number;
+  gap?: number;
+  rivalPlayerId?: string;
+  rivalPseudo?: string;
+  rivalRank?: number;
+}
+
+export interface StandingsEventsData {
+  contestTitle: string;
+  period: string;
+  firstCapturedAt: string | null;
+  lastCapturedAt: string | null;
+  snapshotCount: number;
+  eventCount: number;
+  tightGapThreshold: number;
+  events: StandingEvent[];
+}
+
 function numberValue(value: unknown): number {
   return typeof value === "bigint" ? Number(value) : Number(value ?? 0);
 }
@@ -396,6 +439,195 @@ export async function getHistoryDashboard(
     playerCount: numberValue(summary.rows[0]?.["player_count"]),
     series: series.sort((a, b) => a.currentEscmRank - b.currentEscmRank),
     liveDataAvailable,
+  };
+}
+
+interface EventSnapshotPlayer {
+  playerId: string;
+  pseudo: string;
+  globalRank: number;
+  escmRank: number;
+  points: number;
+}
+
+interface EventSnapshot {
+  id: string;
+  capturedAt: string;
+  contestTitle: string;
+  players: EventSnapshotPlayer[];
+}
+
+function plural(value: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${value} ${value > 1 ? pluralForm : singular}`;
+}
+
+export async function getStandingsEvents(periodValue: number | string = "7d"): Promise<StandingsEventsData> {
+  await ensureHistorySchema();
+  const db = getClient();
+  const period = typeof periodValue === "string"
+    ? parseHistoryPeriod(periodValue)
+    : parseHistoryPeriod(undefined, periodValue);
+  const since = new Date(Date.now() - period.milliseconds).toISOString();
+  const tightGapThreshold = Math.min(Math.max(Number(process.env["STANDINGS_EVENT_TIGHT_GAP_THRESHOLD"] ?? "10"), 1), 100);
+
+  const rows = await db.execute({
+    sql: `SELECT s.id, s.captured_at, s.contest_title,
+        p.player_id, p.pseudo, p.global_rank, p.escm_rank, p.points
+      FROM standings_snapshots s
+      JOIN es_position_history p ON p.snapshot_id = s.id
+      WHERE s.captured_at >= ?
+      ORDER BY s.captured_at ASC, p.escm_rank ASC`,
+    args: [since],
+  });
+
+  const snapshotById = new Map<string, EventSnapshot>();
+  for (const row of rows.rows) {
+    const id = String(row["id"]);
+    let snapshot = snapshotById.get(id);
+    if (!snapshot) {
+      snapshot = {
+        id,
+        capturedAt: String(row["captured_at"]),
+        contestTitle: String(row["contest_title"] ?? "MPP"),
+        players: [],
+      };
+      snapshotById.set(id, snapshot);
+    }
+    snapshot.players.push({
+      playerId: String(row["player_id"]),
+      pseudo: String(row["pseudo"]),
+      globalRank: numberValue(row["global_rank"]),
+      escmRank: numberValue(row["escm_rank"]),
+      points: numberValue(row["points"]),
+    });
+  }
+
+  const snapshots = [...snapshotById.values()].sort((a, b) => a.capturedAt.localeCompare(b.capturedAt));
+  const events: StandingEvent[] = [];
+
+  for (let index = 0; index < snapshots.length; index += 1) {
+    const current = snapshots[index]!;
+    const previous = snapshots[index - 1];
+
+    for (const leader of current.players.slice(0, -1)) {
+      const chaser = current.players[leader.escmRank];
+      if (!chaser) continue;
+      const gap = leader.points - chaser.points;
+      if (gap >= 0 && gap <= tightGapThreshold) {
+        events.push({
+          type: "tight_gap",
+          capturedAt: current.capturedAt,
+          playerId: leader.playerId,
+          pseudo: leader.pseudo,
+          rivalPlayerId: chaser.playerId,
+          rivalPseudo: chaser.pseudo,
+          rank: leader.escmRank,
+          rivalRank: chaser.escmRank,
+          points: leader.points,
+          gap,
+          severity: gap <= Math.ceil(tightGapThreshold / 2) ? "warning" : "info",
+          message: `${leader.pseudo} ne compte que ${plural(gap, "point")} d'avance sur ${chaser.pseudo} entre les rangs #${leader.escmRank} et #${chaser.escmRank}.`,
+        });
+      }
+    }
+
+    if (!previous) continue;
+
+    const previousLeader = previous.players[0];
+    const currentLeader = current.players[0];
+    if (previousLeader && currentLeader && previousLeader.playerId !== currentLeader.playerId) {
+      events.push({
+        type: "leader_changed",
+        capturedAt: current.capturedAt,
+        playerId: currentLeader.playerId,
+        pseudo: currentLeader.pseudo,
+        previousPlayerId: previousLeader.playerId,
+        previousPseudo: previousLeader.pseudo,
+        currentRank: currentLeader.escmRank,
+        previousRank: previousLeader.escmRank,
+        currentPoints: currentLeader.points,
+        severity: "danger",
+        message: `${currentLeader.pseudo} prend la tête e-SCM devant ${previousLeader.pseudo}.`,
+      });
+    }
+
+    const previousByPlayer = new Map(previous.players.map((player) => [player.playerId, player]));
+    const deltas = current.players
+      .map((player) => {
+        const before = previousByPlayer.get(player.playerId);
+        if (!before) return null;
+        return {
+          player,
+          before,
+          pointsDelta: player.points - before.points,
+          rankDelta: before.escmRank - player.escmRank,
+        };
+      })
+      .filter((delta): delta is NonNullable<typeof delta> => delta !== null);
+
+    const bestPoints = deltas.filter((delta) => delta.pointsDelta > 0)
+      .sort((a, b) => b.pointsDelta - a.pointsDelta || b.rankDelta - a.rankDelta)[0];
+    if (bestPoints) {
+      events.push({
+        type: "best_points_gain",
+        capturedAt: current.capturedAt,
+        playerId: bestPoints.player.playerId,
+        pseudo: bestPoints.player.pseudo,
+        previousPoints: bestPoints.before.points,
+        currentPoints: bestPoints.player.points,
+        pointsDelta: bestPoints.pointsDelta,
+        previousRank: bestPoints.before.escmRank,
+        currentRank: bestPoints.player.escmRank,
+        severity: "success",
+        message: `${bestPoints.player.pseudo} signe le plus gros gain avec +${plural(bestPoints.pointsDelta, "point")}.`,
+      });
+    }
+
+    const biggestGain = deltas.filter((delta) => delta.rankDelta > 0)
+      .sort((a, b) => b.rankDelta - a.rankDelta || b.pointsDelta - a.pointsDelta)[0];
+    if (biggestGain) {
+      events.push({
+        type: "biggest_rank_gain",
+        capturedAt: current.capturedAt,
+        playerId: biggestGain.player.playerId,
+        pseudo: biggestGain.player.pseudo,
+        previousRank: biggestGain.before.escmRank,
+        currentRank: biggestGain.player.escmRank,
+        rankDelta: biggestGain.rankDelta,
+        pointsDelta: biggestGain.pointsDelta,
+        severity: "success",
+        message: `${biggestGain.player.pseudo} réalise la plus grosse montée : +${plural(biggestGain.rankDelta, "place")} (#${biggestGain.before.escmRank} → #${biggestGain.player.escmRank}).`,
+      });
+    }
+
+    const biggestDrop = deltas.filter((delta) => delta.rankDelta < 0)
+      .sort((a, b) => a.rankDelta - b.rankDelta || a.pointsDelta - b.pointsDelta)[0];
+    if (biggestDrop) {
+      events.push({
+        type: "biggest_rank_drop",
+        capturedAt: current.capturedAt,
+        playerId: biggestDrop.player.playerId,
+        pseudo: biggestDrop.player.pseudo,
+        previousRank: biggestDrop.before.escmRank,
+        currentRank: biggestDrop.player.escmRank,
+        rankDelta: biggestDrop.rankDelta,
+        pointsDelta: biggestDrop.pointsDelta,
+        severity: "warning",
+        message: `${biggestDrop.player.pseudo} connaît la plus grosse chute : ${plural(Math.abs(biggestDrop.rankDelta), "place")} perdue${Math.abs(biggestDrop.rankDelta) > 1 ? "s" : ""} (#${biggestDrop.before.escmRank} → #${biggestDrop.player.escmRank}).`,
+      });
+    }
+  }
+
+  events.sort((a, b) => b.capturedAt.localeCompare(a.capturedAt));
+  return {
+    contestTitle: snapshots.at(-1)?.contestTitle ?? "MPP",
+    period: period.label,
+    firstCapturedAt: snapshots[0]?.capturedAt ?? null,
+    lastCapturedAt: snapshots.at(-1)?.capturedAt ?? null,
+    snapshotCount: snapshots.length,
+    eventCount: events.length,
+    tightGapThreshold,
+    events,
   };
 }
 

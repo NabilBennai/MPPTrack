@@ -66,6 +66,17 @@
     <code style="color:#22C55E;font-size:11px">GET /api/cron/snapshot</code>
   </div>
 
+  <section id="events-panel" hidden style="margin-bottom:18px;border:1px solid rgba(148,163,184,.09);border-radius:16px;background:#111827;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.3)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div>
+        <p style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#475569">Timeline</p>
+        <h2 class="font-oswald" style="font-size:18px;letter-spacing:.04em;color:#F1F5F9;margin-top:3px">Événements lisibles</h2>
+      </div>
+      <span id="events-summary" style="font-size:11px;color:#64748B;font-weight:700"></span>
+    </div>
+    <div id="events-list" style="display:grid;gap:9px"></div>
+  </section>
+
   <div id="dashboard" class="history-dashboard-panel" hidden style="border:1px solid rgba(148,163,184,.09);border-radius:16px;background:#111827;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.3)">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div>
@@ -99,6 +110,43 @@ const numFmt  = new Intl.NumberFormat('fr-FR');
 const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 let rankMode = 'global';
 let currentData = null;
+
+const EVENT_META = {
+  leader_changed: { icon:'👑', label:'Leader', color:'#FBBF24' },
+  best_points_gain: { icon:'⚡', label:'Points', color:'#22C55E' },
+  biggest_rank_gain: { icon:'↗', label:'Montée', color:'#4ADE80' },
+  biggest_rank_drop: { icon:'↘', label:'Chute', color:'#F97316' },
+  tight_gap: { icon:'🔥', label:'Écart serré', color:'#A855F7' },
+};
+
+function renderEventsTimeline(data) {
+  const panel = document.getElementById('events-panel');
+  const list = document.getElementById('events-list');
+  const summary = document.getElementById('events-summary');
+  summary.textContent = `${data.eventCount} événement${data.eventCount > 1 ? 's' : ''} · seuil ${data.tightGapThreshold} pts`;
+  panel.hidden = data.snapshotCount === 0;
+  if (data.snapshotCount === 0) return;
+
+  const events = data.events.slice(0, 40);
+  if (!events.length) {
+    list.innerHTML = `<div style="padding:16px;border-radius:12px;background:#0C1320;border:1px dashed rgba(148,163,184,.12);color:#64748B;font-size:12px;font-weight:700;text-align:center">Aucun fait marquant détecté sur cette période.</div>`;
+    return;
+  }
+  list.innerHTML = events.map(event => {
+    const meta = EVENT_META[event.type] || { icon:'•', label:event.type, color:'#64748B' };
+    const severityBg = event.severity === 'danger' ? 'rgba(251,191,36,.08)' : event.severity === 'success' ? 'rgba(34,197,94,.07)' : event.severity === 'warning' ? 'rgba(249,115,22,.07)' : 'rgba(148,163,184,.04)';
+    return `<article style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;padding:12px;border:1px solid rgba(148,163,184,.08);border-radius:13px;background:${severityBg}">
+      <div style="width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:${meta.color}22;color:${meta.color};font-size:16px;border:1px solid ${meta.color}44">${meta.icon}</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px">
+          <strong style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:${meta.color};font-weight:900">${meta.label}</strong>
+          <time style="font-size:10px;color:#475569;font-weight:800">${dateFmt.format(new Date(event.capturedAt))}</time>
+        </div>
+        <p style="font-size:13px;line-height:1.45;color:#CBD5E1;font-weight:700">${esc(event.message)}</p>
+      </div>
+    </article>`;
+  }).join('');
+}
 
 // ── Points vertical axis ─────────────────────────────────────────────────
 function renderPointsBoard(series, liveDataAvailable) {
@@ -391,10 +439,17 @@ function render(data) {
 async function loadHistory() {
   document.getElementById('empty-state').hidden = true;
   document.getElementById('dashboard').hidden   = true;
+  document.getElementById('events-panel').hidden = true;
   try {
-    const res  = await fetch(`/api/history?days=${document.getElementById('range-select').value}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur');
+    const days = document.getElementById('range-select').value;
+    const [historyRes, eventsRes] = await Promise.all([
+      fetch(`/api/history?days=${days}`),
+      fetch(`/api/events?days=${days}`),
+    ]);
+    const data = await historyRes.json();
+    const eventsData = await eventsRes.json();
+    if (!historyRes.ok) throw new Error(data.error || 'Erreur');
+    if (eventsRes.ok) renderEventsTimeline(eventsData);
     render(data);
   } catch (err) {
     document.getElementById('empty-state').hidden = false;

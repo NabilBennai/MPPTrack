@@ -10,6 +10,7 @@ import {
   mppDebugProbeHandler,
   mppHistoryPageHandler,
   mppHistoryDataHandler,
+  mppEventsHandler,
   mppFormRankingHandler,
   mppMovementsHandler,
   mppRivalryReportHandler,
@@ -35,6 +36,7 @@ router.get("/rivalries",           mppRivalriesPageHandler);
 router.get("/form",                mppFormPageHandler);
 router.get("/distributions",       mppDistributionsPageHandler);
 router.get("/api/history",         mppHistoryDataHandler);
+router.get("/api/events",          mppEventsHandler);
 router.get("/api/duel",            mppDuelDataHandler);
 router.get("/api/duel/players",    mppDuelPlayersHandler);
 router.get("/api/movements",       mppMovementsHandler);
