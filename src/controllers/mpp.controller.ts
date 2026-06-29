@@ -286,7 +286,11 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
     const topRankGains = [...movementRows]
       .filter((movement) => movement.currentDepartmentRank !== null && movement.rankDelta > 0)
       .sort((a, b) => b.rankDelta - a.rankDelta || b.pointsDelta - a.pointsDelta)
-      .slice(0, 5);
+      .slice(0, 12);
+    const topRankDrops = [...movementRows]
+      .filter((movement) => movement.currentDepartmentRank !== null && movement.rankDelta < 0)
+      .sort((a, b) => a.rankDelta - b.rankDelta || a.pointsDelta - b.pointsDelta)
+      .slice(0, 8);
 
     res.json({
       generatedAt: new Date().toISOString(),
@@ -316,6 +320,7 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
         bestRankDelta: topRankGains[0]?.rankDelta ?? 0,
         topProgressions,
         topRankGains,
+        topRankDrops,
       },
     });
   } catch (error) {

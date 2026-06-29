@@ -466,7 +466,7 @@ document.getElementById('dept-filters').addEventListener('click', e => {
   function drawGigaExport(data) {
     const canvas = document.createElement('canvas');
     canvas.width = 1800;
-    canvas.height = 2400;
+    canvas.height = 2800;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#0C1320';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -544,18 +544,38 @@ document.getElementById('dept-filters').addEventListener('click', e => {
       drawText(ctx, `${p.rankDelta >= 0 ? '+' : ''}${p.rankDelta} pl.`, 1660, y, { size: 20, color: '#94A3B8', align: 'right' });
     });
 
-    fillRoundRect(ctx, 96, 1845, 1608, 380, 32, 'rgba(17,24,39,.92)');
-    drawText(ctx, 'Infos utiles équipe', 136, 1884, { size: 34, weight: 900 });
+    fillRoundRect(ctx, 96, 1845, 1608, 440, 32, 'rgba(17,24,39,.92)');
+    drawText(ctx, 'Planche positions 24h', 136, 1884, { size: 34, weight: 900 });
+    drawText(ctx, 'Progressions de rang e-SCM entre les deux derniers snapshots 24h', 136, 1930, { size: 22, color: '#94A3B8' });
+    const rankGains = k.topRankGains || [];
+    const rankDrops = k.topRankDrops || [];
+    const drawPositionRow = (p, x, y, good) => {
+      const color = good ? '#22C55E' : '#F97316';
+      const sign = p.rankDelta > 0 ? '+' : '';
+      drawText(ctx, p.pseudo, x, y, { size: 24, weight: 800, maxWidth: 300 });
+      drawText(ctx, `#${p.previousDepartmentRank || '—'} → #${p.currentDepartmentRank || '—'}`, x + 340, y, { size: 22, color: '#94A3B8', weight: 800 });
+      drawText(ctx, `${sign}${p.rankDelta} pl.`, x + 520, y, { size: 24, weight: 900, color, align: 'right' });
+      drawText(ctx, `${p.pointsDelta >= 0 ? '+' : ''}${formatNumber(p.pointsDelta)} pts`, x + 660, y, { size: 20, weight: 800, color: '#64748B', align: 'right' });
+    };
+    drawText(ctx, '⬆ Montées', 136, 1988, { size: 26, weight: 900, color: '#22C55E' });
+    drawText(ctx, '⬇ Reculs à surveiller', 940, 1988, { size: 26, weight: 900, color: '#F97316' });
+    if (rankGains.length === 0) drawText(ctx, 'Aucune montée détectée', 136, 2040, { size: 24, color: '#64748B' });
+    rankGains.slice(0, 6).forEach((p, i) => drawPositionRow(p, 136, 2040 + i * 38, true));
+    if (rankDrops.length === 0) drawText(ctx, 'Aucun recul détecté', 940, 2040, { size: 24, color: '#64748B' });
+    rankDrops.slice(0, 6).forEach((p, i) => drawPositionRow(p, 940, 2040 + i * 38, false));
+
+    fillRoundRect(ctx, 96, 2335, 1608, 300, 32, 'rgba(17,24,39,.92)');
+    drawText(ctx, 'Infos utiles équipe', 136, 2374, { size: 34, weight: 900 });
     const es = data.escmDistribution || {};
     const stats = (data.departmentStats || []).map(s => `${s.departmentCode}: ${formatNumber(s.totalPoints)} pts (${s.playerCount})`).join('  ·  ');
     const infoLines = [
       `e-SCM: min ${formatNumber(es.min)} · Q1 ${formatNumber(es.q1)} · médiane ${formatNumber(es.median)} · Q3 ${formatNumber(es.q3)} · max ${formatNumber(es.max)} · moyenne ${formatNumber(es.mean)}.`,
       `Totaux départements: ${stats || 'indisponibles'}.`,
-      `Top gains de rang: ${(k.topRankGains || []).slice(0, 5).map(p => `${p.pseudo} +${p.rankDelta}`).join(' · ') || 'aucun dépassement détecté'}.`,
+      `Top gains de rang: ${rankGains.slice(0, 5).map(p => `${p.pseudo} +${p.rankDelta}`).join(' · ') || 'aucun dépassement détecté'}.`,
       `Astuce: les points violets de la distribution représentent e-SCM; les autres départements servent de repère.`
     ];
-    infoLines.forEach((line, i) => drawText(ctx, line, 136, 1944 + i * 58, { size: 26, color: i === 0 ? '#F1F5F9' : '#94A3B8', weight: 650, maxWidth: 1520 }));
-    drawText(ctx, 'mpptrack · export PNG automatique', 900, 2308, { size: 24, color: '#64748B', align: 'center', weight: 700 });
+    infoLines.forEach((line, i) => drawText(ctx, line, 136, 2434 + i * 46, { size: 24, color: i === 0 ? '#F1F5F9' : '#94A3B8', weight: 650, maxWidth: 1520 }));
+    drawText(ctx, 'mpptrack · export PNG automatique', 900, 2710, { size: 24, color: '#64748B', align: 'center', weight: 700 });
     return canvas;
   }
 
