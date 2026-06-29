@@ -310,6 +310,7 @@ function roundMetric(value: number): number {
 export function computeDepartmentPointDistributions(players: MppPlayer[]): DepartmentPointDistribution[] {
   const groups = new Map<DepartmentCode, MppPlayer[]>();
   for (const player of players) {
+    if (player.departmentCode === "UNKNOWN") continue;
     const group = groups.get(player.departmentCode) ?? [];
     group.push(player);
     groups.set(player.departmentCode, group);
