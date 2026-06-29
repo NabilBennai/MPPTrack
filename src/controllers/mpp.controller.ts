@@ -26,6 +26,7 @@ import {
   getHistoryDashboard,
   getStandingsMovements,
   getDuelHistory,
+  getStandingsEvents,
 } from "../services/history/standings-history.service.js";
 
 function isDev(): boolean {
@@ -49,6 +50,10 @@ export async function mppIndexHandler(_req: Request, res: Response): Promise<voi
 
 export async function mppHistoryPageHandler(_req: Request, res: Response): Promise<void> {
   res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "history.html"));
+}
+
+export async function mppTimelinePageHandler(_req: Request, res: Response): Promise<void> {
+  res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "timeline.html"));
 }
 
 export async function mppDuelPageHandler(_req: Request, res: Response): Promise<void> {
@@ -146,6 +151,17 @@ export async function mppHistoryDataHandler(req: Request, res: Response): Promis
     res.json(await getHistoryDashboard(period ?? days, players));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Historique indisponible.";
+    res.status(500).json({ error: message });
+  }
+}
+
+export async function mppEventsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const period = typeof req.query["period"] === "string" ? req.query["period"] : undefined;
+    const days = typeof req.query["days"] === "string" ? Number(req.query["days"]) : 7;
+    res.json(await getStandingsEvents(period ?? days));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Événements indisponibles.";
     res.status(500).json({ error: message });
   }
 }
