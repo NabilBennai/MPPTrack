@@ -18,6 +18,8 @@ import {
   mppMovementsPageHandler,
   mppRivalriesPageHandler,
   mppFormPageHandler,
+  mppDistributionsPageHandler,
+  mppDepartmentDistributionsHandler,
   mppDuelDataHandler,
   mppDuelPlayersHandler,
 } from "../controllers/mpp.controller.js";
@@ -30,12 +32,14 @@ router.get("/duel",                mppDuelPageHandler);
 router.get("/movements",           mppMovementsPageHandler);
 router.get("/rivalries",           mppRivalriesPageHandler);
 router.get("/form",                mppFormPageHandler);
+router.get("/distributions",       mppDistributionsPageHandler);
 router.get("/api/history",         mppHistoryDataHandler);
 router.get("/api/duel",            mppDuelDataHandler);
 router.get("/api/duel/players",    mppDuelPlayersHandler);
 router.get("/api/movements",       mppMovementsHandler);
 router.get("/api/rivalry-report",  mppRivalryReportHandler);
 router.get("/api/form-ranking",    mppFormRankingHandler);
+router.get("/api/distributions",   mppDepartmentDistributionsHandler);
 router.get("/api/cron/snapshot",   mppSnapshotCronHandler);
 router.get("/classement",          mppClassementHandler);
 router.get("/stats",               mppStatsHandler);

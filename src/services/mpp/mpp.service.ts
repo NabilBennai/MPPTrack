@@ -5,6 +5,7 @@ import type {
   MppUserContestsResponse,
   MppContestCard,
   DepartmentStats,
+  DepartmentPointDistribution,
   DepartmentCode,
 } from "../../types/mpp.types.js";
 import { getDepartmentFromPseudo } from "../../utils/departments.js";
@@ -288,6 +289,56 @@ export function computeDepartmentStats(players: MppPlayer[]): DepartmentStats[] 
       } satisfies DepartmentStats;
     })
     .sort((a, b) => b.totalPoints - a.totalPoints);
+}
+
+function percentile(sorted: number[], ratio: number): number {
+  if (sorted.length === 0) return 0;
+  if (sorted.length === 1) return sorted[0] ?? 0;
+  const index = (sorted.length - 1) * ratio;
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+  const weight = index - lower;
+  const lowerValue = sorted[lower] ?? 0;
+  const upperValue = sorted[upper] ?? lowerValue;
+  return lowerValue + (upperValue - lowerValue) * weight;
+}
+
+function roundMetric(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+export function computeDepartmentPointDistributions(players: MppPlayer[]): DepartmentPointDistribution[] {
+  const groups = new Map<DepartmentCode, MppPlayer[]>();
+  for (const player of players) {
+    if (player.departmentCode === "UNKNOWN") continue;
+    const group = groups.get(player.departmentCode) ?? [];
+    group.push(player);
+    groups.set(player.departmentCode, group);
+  }
+
+  return Array.from(groups.entries())
+    .map(([code, members]) => {
+      const points = members.map((player) => player.points).sort((a, b) => a - b);
+      const totalPoints = points.reduce((sum, value) => sum + value, 0);
+      const mean = totalPoints / Math.max(points.length, 1);
+      const variance = points.reduce((sum, value) => sum + (value - mean) ** 2, 0) / Math.max(points.length, 1);
+
+      return {
+        departmentCode: code,
+        departmentName: members[0]?.departmentName ?? "Inconnu",
+        playerCount: points.length,
+        min: points[0] ?? 0,
+        q1: roundMetric(percentile(points, 0.25)),
+        median: roundMetric(percentile(points, 0.5)),
+        q3: roundMetric(percentile(points, 0.75)),
+        max: points[points.length - 1] ?? 0,
+        mean: roundMetric(mean),
+        standardDeviation: roundMetric(Math.sqrt(variance)),
+        totalPoints,
+        points,
+      } satisfies DepartmentPointDistribution;
+    })
+    .sort((a, b) => b.median - a.median || b.mean - a.mean);
 }
 
 // ---------------------------------------------------------------------------
