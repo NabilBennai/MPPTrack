@@ -5,6 +5,7 @@ import {
   getMppUser,
   filterByDepartment,
   computeDepartmentStats,
+  computeDepartmentPointDistributions,
   probeRankingEndpoints,
   invalidateCache,
   getContestInfo,
@@ -64,6 +65,24 @@ export async function mppRivalriesPageHandler(_req: Request, res: Response): Pro
 
 export async function mppFormPageHandler(_req: Request, res: Response): Promise<void> {
   res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "form.html"));
+}
+
+export async function mppDistributionsPageHandler(_req: Request, res: Response): Promise<void> {
+  res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "distributions.html"));
+}
+
+export async function mppDepartmentDistributionsHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const players = await getMppClassement();
+    res.json({
+      capturedAt: new Date().toISOString(),
+      playerCount: players.length,
+      distributions: computeDepartmentPointDistributions(players),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Distributions indisponibles.";
+    res.status(500).json({ error: message });
+  }
 }
 
 export async function mppDuelDataHandler(req: Request, res: Response): Promise<void> {

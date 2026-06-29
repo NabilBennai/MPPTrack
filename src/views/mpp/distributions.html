@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Distributions · MPP Track</title>
+  <link rel="stylesheet" href="/css/output.css" />
+</head>
+<body class="app-shell" style="min-height:100dvh;background:#0C1320;color:#F1F5F9;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased">
+<header style="position:sticky;top:0;z-index:20;background:#111827;border-bottom:1px solid rgba(148,163,184,.09)">
+  <div class="mpp-header-inner px-5 sm:px-8" style="height:56px;display:flex;align-items:center;gap:16px">
+    <a href="/" style="display:flex;align-items:center;gap:11px;text-decoration:none"><div style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.28)">⚽</div><span class="font-oswald" style="font-size:20px;font-weight:700;letter-spacing:.14em;color:#F1F5F9">MPP<span style="color:#22C55E">TRACK</span></span></a>
+    <details class="mpp-nav-menu"><summary class="mpp-nav-toggle" aria-label="Ouvrir le menu de navigation"><span></span><span></span><span></span></summary><nav class="mpp-nav-links" style="display:flex;gap:3px;margin-left:4px;flex-wrap:wrap">
+      <a href="/" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Classement</a>
+      <a href="/movements" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Mouvements</a>
+      <a href="/rivalries" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Rivalités</a>
+      <a href="/form" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Forme</a>
+      <a href="/distributions" aria-current="page" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#F1F5F9;background:rgba(255,255,255,.06)">Distributions</a>
+      <a href="/history" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Historique</a>
+      <a href="/duel" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Duel</a>
+    </nav></details>
+  </div>
+</header>
+<main class="px-5 sm:px-8" style="max-width:1280px;margin:0 auto;padding-top:22px;padding-bottom:48px">
+  <section style="border-radius:16px;border:1px solid rgba(148,163,184,.09);background:#111827;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <div>
+        <p style="margin:0;color:#22C55E;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.12em">Analyse par département</p>
+        <h1 class="font-oswald" style="margin:2px 0 0;color:#F1F5F9;font-size:26px;letter-spacing:.06em">DISTRIBUTION DES POINTS</h1>
+        <p id="distribution-meta" style="margin:5px 0 0;color:#64748B;font-size:12px">Chargement des grandeurs caractéristiques…</p>
+      </div>
+      <button onclick="loadDistributions()" style="padding:8px 13px;border-radius:9px;border:1px solid rgba(34,197,94,.28);background:rgba(34,197,94,.10);color:#86EFAC;cursor:pointer;font-size:12px;font-weight:800">↺ Rafraîchir</button>
+    </div>
+    <div id="chart" style="min-height:420px;border:1px solid rgba(34,197,94,.10);border-radius:14px;background:radial-gradient(ellipse at 50% -10%,rgba(34,197,94,.08),transparent 55%),#0C1320;overflow:auto"></div>
+  </section>
+  <section id="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:14px"></section>
+</main>
+<script>
+const fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+const colors = { MT:'#22C55E', ES:'#A855F7', TD:'#3B82F6', WD:'#F59E0B', UNKNOWN:'#64748B' };
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+function kernel(u) { return Math.exp(-0.5 * u * u); }
+function density(points, yValue, bandwidth) { return points.reduce((sum, p) => sum + kernel((yValue - p) / bandwidth), 0) / (points.length * bandwidth); }
+function pathFor(dist, x, yOf, maxDensity) {
+  const span = Math.max(dist.max - dist.min, 1);
+  const bandwidth = Math.max(span / 5, 18);
+  const samples = Array.from({ length: 36 }, (_, i) => dist.min + (span * i) / 35);
+  const widths = samples.map(v => 8 + (density(dist.points, v, bandwidth) / Math.max(maxDensity, 0.0001)) * 54);
+  const left = samples.map((v, i) => `${x - widths[i]},${yOf(v)}`);
+  const right = samples.slice().reverse().map((v, i) => `${x + widths[widths.length - 1 - i]},${yOf(v)}`);
+  return 'M ' + left.concat(right).join(' L ') + ' Z';
+}
+function render(data) {
+  const distributions = data.distributions || [];
+  const chart = document.getElementById('chart');
+  const grid = document.getElementById('stats-grid');
+  if (!distributions.length) { chart.innerHTML = '<p style="padding:40px;color:#64748B">Aucune donnée disponible.</p>'; return; }
+  const min = Math.min(...distributions.map(d => d.min));
+  const max = Math.max(...distributions.map(d => d.max));
+  const W = Math.max(760, distributions.length * 180 + 120), H = 520, PL = 72, PR = 28, PT = 38, PB = 78;
+  const yOf = v => PT + (1 - (v - min) / Math.max(max - min, 1)) * (H - PT - PB);
+  let maxD = 0;
+  distributions.forEach(d => { const span = Math.max(d.max - d.min, 1), bw = Math.max(span / 5, 18); for (let i=0;i<36;i++) maxD = Math.max(maxD, density(d.points, d.min + span*i/35, bw)); });
+  const ticks = Array.from({ length: 5 }, (_, i) => min + (max - min) * i / 4);
+  const violins = distributions.map((d, i) => {
+    const x = PL + 92 + i * ((W - PL - PR - 110) / Math.max(distributions.length - 1, 1));
+    const c = colors[d.departmentCode] || colors.UNKNOWN;
+    const points = d.points.map(p => `<circle cx="${x + (Math.random() - .5) * 34}" cy="${yOf(p)}" r="3" fill="#F1F5F9" opacity=".38"><title>${esc(d.departmentName)} · ${fmt.format(p)} pts</title></circle>`).join('');
+    return `<g><path d="${pathFor(d, x, yOf, maxD)}" fill="${c}" fill-opacity=".23" stroke="${c}" stroke-width="2"/>
+      <line x1="${x-48}" x2="${x+48}" y1="${yOf(d.median)}" y2="${yOf(d.median)}" stroke="#F1F5F9" stroke-width="2.5"><title>Médiane ${fmt.format(d.median)}</title></line>
+      <rect x="${x-24}" y="${yOf(d.q3)}" width="48" height="${Math.max(yOf(d.q1)-yOf(d.q3),2)}" rx="5" fill="${c}" fill-opacity=".34" stroke="${c}"/>
+      <line x1="${x}" x2="${x}" y1="${yOf(d.min)}" y2="${yOf(d.max)}" stroke="${c}" stroke-opacity=".8" stroke-dasharray="3 4"/>
+      ${points}<text x="${x}" y="${H-42}" text-anchor="middle" fill="#F1F5F9" font-size="13" font-weight="900">${esc(d.departmentName)}</text>
+      <text x="${x}" y="${H-24}" text-anchor="middle" fill="#64748B" font-size="11" font-weight="700">${d.playerCount} joueurs</text></g>`;
+  }).join('');
+  chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="display:block;width:100%;height:auto;min-width:760px" role="img" aria-label="Violin plots des points par département">
+    ${ticks.map(t => `<line x1="${PL}" x2="${W-PR}" y1="${yOf(t)}" y2="${yOf(t)}" stroke="rgba(148,163,184,.10)"/><text x="${PL-12}" y="${yOf(t)+4}" text-anchor="end" fill="#64748B" font-size="11" font-weight="700">${fmt.format(t)}</text>`).join('')}
+    <text x="18" y="${PT}" fill="#475569" font-size="11" font-weight="900" transform="rotate(-90 18 ${PT})">POINTS</text>${violins}
+    <text x="${W-PR}" y="22" text-anchor="end" fill="#475569" font-size="11" font-weight="800">Trait blanc = médiane · boîte = Q1-Q3 · points = joueurs</text>
+  </svg>`;
+  grid.innerHTML = distributions.map(d => `<article style="border:1px solid rgba(148,163,184,.09);border-radius:13px;background:#111827;padding:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="font:800 15px Manrope,sans-serif;color:#F1F5F9">${esc(d.departmentName)}</h2><span style="color:${colors[d.departmentCode] || colors.UNKNOWN};font-weight:900">${d.playerCount}</span></div>
+    <dl style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0 0;font-size:12px;color:#64748B"><div>Moyenne<br><b style="color:#F1F5F9;font-size:17px">${fmt.format(d.mean)}</b></div><div>Médiane<br><b style="color:#F1F5F9;font-size:17px">${fmt.format(d.median)}</b></div><div>Q1 / Q3<br><b style="color:#CBD5E1">${fmt.format(d.q1)} / ${fmt.format(d.q3)}</b></div><div>Min / Max<br><b style="color:#CBD5E1">${fmt.format(d.min)} / ${fmt.format(d.max)}</b></div><div>Écart-type<br><b style="color:#CBD5E1">${fmt.format(d.standardDeviation)}</b></div><div>Total<br><b style="color:#CBD5E1">${fmt.format(d.totalPoints)}</b></div></dl>
+  </article>`).join('');
+  document.getElementById('distribution-meta').textContent = `${data.playerCount} joueurs analysés · données actualisées le ${new Date(data.capturedAt).toLocaleString('fr-FR')}`;
+}
+async function loadDistributions() {
+  document.getElementById('chart').innerHTML = '<div style="padding:72px 0;text-align:center;color:#64748B">Chargement…</div>';
+  try { const res = await fetch('/api/distributions'); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Erreur'); render(data); }
+  catch (error) { document.getElementById('chart').innerHTML = `<p style="padding:40px;color:#EF4444">${esc(error.message || 'Distributions indisponibles.')}</p>`; }
+}
+document.addEventListener('DOMContentLoaded', loadDistributions);
+</script>
+</body>
+</html>

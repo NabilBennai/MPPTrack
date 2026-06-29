@@ -76,6 +76,21 @@ export interface MppPlayer {
   avatarUrl?: string;
 }
 
+export interface DepartmentPointDistribution {
+  departmentCode: DepartmentCode;
+  departmentName: DepartmentName;
+  playerCount: number;
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+  mean: number;
+  standardDeviation: number;
+  totalPoints: number;
+  points: number[];
+}
+
 export interface DepartmentStats {
   departmentCode: DepartmentCode;
   departmentName: DepartmentName;
