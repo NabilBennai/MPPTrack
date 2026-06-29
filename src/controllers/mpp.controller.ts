@@ -52,6 +52,10 @@ export async function mppHistoryPageHandler(_req: Request, res: Response): Promi
   res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "history.html"));
 }
 
+export async function mppTimelinePageHandler(_req: Request, res: Response): Promise<void> {
+  res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "timeline.html"));
+}
+
 export async function mppDuelPageHandler(_req: Request, res: Response): Promise<void> {
   res.sendFile(path.join(process.cwd(), "src", "views", "mpp", "duel.html"));
 }

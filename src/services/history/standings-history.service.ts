@@ -514,6 +514,18 @@ export async function getStandingsEvents(periodValue: number | string = "7d"): P
       if (!chaser) continue;
       const gap = leader.points - chaser.points;
       if (gap >= 0 && gap <= tightGapThreshold) {
+        const previousLeaderAtRank = previous?.players[leader.escmRank - 1];
+        const previousChaserAtRank = previous?.players[leader.escmRank];
+        const previousGap = previousLeaderAtRank && previousChaserAtRank
+          ? previousLeaderAtRank.points - previousChaserAtRank.points
+          : null;
+        const wasAlreadySameTightGap = previousLeaderAtRank?.playerId === leader.playerId
+          && previousChaserAtRank?.playerId === chaser.playerId
+          && previousGap !== null
+          && previousGap >= 0
+          && previousGap <= tightGapThreshold;
+        if (wasAlreadySameTightGap) continue;
+
         events.push({
           type: "tight_gap",
           capturedAt: current.capturedAt,

@@ -9,6 +9,7 @@ import {
   mppDebugUserHandler,
   mppDebugProbeHandler,
   mppHistoryPageHandler,
+  mppTimelinePageHandler,
   mppHistoryDataHandler,
   mppEventsHandler,
   mppFormRankingHandler,
@@ -30,6 +31,7 @@ const router = Router();
 
 router.get("/",                    mppIndexHandler);
 router.get("/history",             mppHistoryPageHandler);
+router.get("/timeline",            mppTimelinePageHandler);
 router.get("/duel",                mppDuelPageHandler);
 router.get("/movements",           mppMovementsPageHandler);
 router.get("/rivalries",           mppRivalriesPageHandler);

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timeline · MPP Track</title>
+  <link rel="stylesheet" href="/css/output.css">
+</head>
+<body style="min-height:100dvh;background:#0C1320;color:#F1F5F9;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased">
+<header style="position:sticky;top:0;z-index:20;background:#111827;border-bottom:1px solid rgba(148,163,184,.09)">
+  <div class="app-header-inner mpp-header-inner px-5 sm:px-8" style="height:56px;display:flex;align-items:center;gap:16px">
+    <a href="/" style="display:flex;align-items:center;gap:11px;text-decoration:none">
+      <div style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.28)">⚽</div>
+      <span class="font-oswald" style="font-size:20px;font-weight:700;letter-spacing:0.14em;color:#F1F5F9">MPP<span style="color:#22C55E">TRACK</span></span>
+    </a>
+    <details class="mpp-nav-menu"><summary class="mpp-nav-toggle" aria-label="Ouvrir le menu de navigation"><span></span><span></span><span></span></summary><nav class="mpp-nav-links" style="display:flex;gap:3px;margin-left:4px;flex-wrap:wrap">
+      <a href="/" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Classement</a>
+      <a href="/movements" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Mouvements</a>
+      <a href="/rivalries" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Rivalités</a>
+      <a href="/form" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Forme</a>
+      <a href="/distributions" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Distributions</a>
+      <a href="/history" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Historique</a>
+      <a href="/timeline" aria-current="page" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#F1F5F9;background:rgba(255,255,255,.06)">Timeline</a>
+      <a href="/duel" style="padding:5px 10px;border-radius:7px;text-decoration:none;font-size:12px;font-weight:700;color:#475569">Duel</a>
+    </nav></details>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.08em">
+        Période
+        <select id="range-select" style="border-radius:8px;padding:5px 9px;font-size:12px;font-family:'Manrope',sans-serif;cursor:pointer;outline:none;border:1px solid rgba(148,163,184,.12);color:#F1F5F9;background:#1A2335">
+          <option value="1">24 heures</option>
+          <option value="7" selected>7 jours</option>
+          <option value="30">30 jours</option>
+          <option value="90">90 jours</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</header>
+
+<main class="px-5 sm:px-8" style="max-width:980px;margin:0 auto;padding-top:22px;padding-bottom:48px">
+  <section style="margin-bottom:18px;border:1px solid rgba(147,51,234,.16);border-radius:18px;background:radial-gradient(ellipse at top,rgba(147,51,234,.12),transparent 58%),#111827;padding:22px;box-shadow:0 2px 8px rgba(0,0,0,.3)">
+    <p style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:#A855F7">Timeline e-SCM</p>
+    <h1 class="font-oswald" style="margin-top:4px;font-size:28px;letter-spacing:.05em;color:#F1F5F9">Événements dérivés des snapshots</h1>
+    <p id="timeline-summary" style="margin-top:8px;color:#64748B;font-size:13px;font-weight:700">Chargement des faits marquants…</p>
+  </section>
+
+  <section id="empty-state" hidden style="padding:64px 24px;text-align:center;border:1px dashed rgba(148,163,184,.15);border-radius:16px;background:rgba(34,197,94,.03)">
+    <div style="width:52px;height:52px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:#22C55E;background:rgba(34,197,94,.10);font-size:26px">⌁</div>
+    <h2 class="font-oswald" style="font-size:24px;color:#F1F5F9;letter-spacing:.04em">TIMELINE VIDE</h2>
+    <p id="empty-message" style="max-width:520px;margin:8px auto 16px;color:#64748B;font-size:13px">Aucun événement lisible détecté sur cette période.</p>
+  </section>
+
+  <section id="events-list" style="display:grid;gap:10px"></section>
+</main>
+
+<script>
+const dateFmt = new Intl.DateTimeFormat('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris' });
+const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const EVENT_META = {
+  leader_changed: { icon:'👑', label:'Leader', color:'#FBBF24' },
+  best_points_gain: { icon:'⚡', label:'Points', color:'#22C55E' },
+  biggest_rank_gain: { icon:'↗', label:'Montée', color:'#4ADE80' },
+  biggest_rank_drop: { icon:'↘', label:'Chute', color:'#F97316' },
+  tight_gap: { icon:'🔥', label:'Écart serré', color:'#A855F7' },
+};
+
+function eventCard(event) {
+  const meta = EVENT_META[event.type] || { icon:'•', label:event.type, color:'#64748B' };
+  const severityBg = event.severity === 'danger' ? 'rgba(251,191,36,.08)' : event.severity === 'success' ? 'rgba(34,197,94,.07)' : event.severity === 'warning' ? 'rgba(249,115,22,.07)' : 'rgba(148,163,184,.04)';
+  return `<article style="display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start;padding:14px;border:1px solid rgba(148,163,184,.08);border-radius:14px;background:${severityBg}">
+    <div style="width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:${meta.color}22;color:${meta.color};font-size:17px;border:1px solid ${meta.color}44">${meta.icon}</div>
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+        <strong style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:${meta.color};font-weight:900">${meta.label}</strong>
+        <time style="font-size:10px;color:#475569;font-weight:800">${dateFmt.format(new Date(event.capturedAt))}</time>
+      </div>
+      <p style="font-size:13px;line-height:1.45;color:#CBD5E1;font-weight:700">${esc(event.message)}</p>
+    </div>
+  </article>`;
+}
+
+function renderTimeline(data) {
+  const list = document.getElementById('events-list');
+  const empty = document.getElementById('empty-state');
+  document.getElementById('timeline-summary').textContent = `${data.eventCount} événement${data.eventCount > 1 ? 's' : ''} · ${data.snapshotCount} snapshot${data.snapshotCount > 1 ? 's' : ''} · seuil écart serré ${data.tightGapThreshold} pts`;
+  if (!data.events.length) {
+    list.innerHTML = '';
+    empty.hidden = false;
+    document.getElementById('empty-message').textContent = data.snapshotCount === 0
+      ? "Aucun snapshot enregistré sur cette période."
+      : "Aucun fait marquant détecté sur cette période.";
+    return;
+  }
+  empty.hidden = true;
+  list.innerHTML = data.events.map(eventCard).join('');
+}
+
+async function loadTimeline() {
+  const list = document.getElementById('events-list');
+  list.innerHTML = `<div style="height:76px;border-radius:14px" class="shimmer"></div><div style="height:76px;border-radius:14px;animation-delay:.12s" class="shimmer"></div>`;
+  document.getElementById('empty-state').hidden = true;
+  try {
+    const days = document.getElementById('range-select').value;
+    const response = await fetch(`/api/events?days=${days}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Erreur');
+    renderTimeline(data);
+  } catch (error) {
+    list.innerHTML = '';
+    document.getElementById('empty-state').hidden = false;
+    document.getElementById('empty-message').textContent = error.message;
+    document.getElementById('timeline-summary').textContent = 'Événements indisponibles.';
+  }
+}
+
+document.getElementById('range-select').addEventListener('change', loadTimeline);
+loadTimeline();
+</script>
+</body>
+</html>
