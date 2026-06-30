@@ -33,6 +33,23 @@ function isDev(): boolean {
   return process.env["NODE_ENV"] !== "production";
 }
 
+function formatSignedNumber(value: number): string {
+  return `${value >= 0 ? "+" : ""}${value}`;
+}
+
+function buildMvp24hSummary(mvp: { pseudo: string; pointsDelta: number; rankDelta: number; enteredTop5: boolean; enteredTop10: boolean }): string {
+  const parts = [`${mvp.pseudo} prend le MVP 24h avec ${formatSignedNumber(mvp.pointsDelta)} point${Math.abs(mvp.pointsDelta) > 1 ? "s" : ""}`];
+  if (mvp.rankDelta > 0) {
+    parts.push(`${formatSignedNumber(mvp.rankDelta)} place${mvp.rankDelta > 1 ? "s" : ""}`);
+  }
+  if (mvp.enteredTop5) {
+    parts.push("une entrée dans le Top 5 e-SCM");
+  } else if (mvp.enteredTop10) {
+    parts.push("une entrée dans le Top 10 e-SCM");
+  }
+  return `${parts.join(", ")}.`;
+}
+
 function formatDate(): string {
   return new Date().toLocaleString("fr-FR", {
     dateStyle: "long",
@@ -362,6 +379,44 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
       .filter((movement) => movement.currentDepartmentRank !== null && movement.rankDelta < 0)
       .sort((a, b) => a.rankDelta - b.rankDelta || a.pointsDelta - b.pointsDelta)
       .slice(0, 8);
+    const mvpCandidate = [...movementRows]
+      .filter((movement) => movement.currentDepartmentRank !== null && movement.currentPoints !== null)
+      .map((movement) => {
+        const enteredTop10 = movement.currentDepartmentRank !== null
+          && movement.currentDepartmentRank <= 10
+          && (movement.previousDepartmentRank === null || movement.previousDepartmentRank > 10);
+        const enteredTop5 = movement.currentDepartmentRank !== null
+          && movement.currentDepartmentRank <= 5
+          && (movement.previousDepartmentRank === null || movement.previousDepartmentRank > 5);
+        const score = movement.pointsDelta * 100
+          + (movement.rankDelta > 0 ? movement.rankDelta * 10 : 0)
+          + (enteredTop10 ? 25 : 0)
+          + (enteredTop5 ? 50 : 0);
+        return { ...movement, enteredTop10, enteredTop5, score };
+      })
+      .sort((a, b) => b.score - a.score
+        || b.pointsDelta - a.pointsDelta
+        || b.rankDelta - a.rankDelta
+        || (a.currentDepartmentRank ?? Number.MAX_SAFE_INTEGER) - (b.currentDepartmentRank ?? Number.MAX_SAFE_INTEGER))[0] ?? null;
+    const mvp24h = mvpCandidate ? {
+      pseudo: mvpCandidate.pseudo,
+      currentRank: mvpCandidate.currentDepartmentRank,
+      currentPoints: mvpCandidate.currentPoints,
+      pointsDelta: mvpCandidate.pointsDelta,
+      rankDelta: mvpCandidate.rankDelta,
+      summary: buildMvp24hSummary({
+        pseudo: mvpCandidate.pseudo,
+        pointsDelta: mvpCandidate.pointsDelta,
+        rankDelta: mvpCandidate.rankDelta,
+        enteredTop5: mvpCandidate.enteredTop5,
+        enteredTop10: mvpCandidate.enteredTop10,
+      }),
+      badges: {
+        rankGain: mvpCandidate.rankDelta > 0,
+        enteredTop10: mvpCandidate.enteredTop10,
+        enteredTop5: mvpCandidate.enteredTop5,
+      },
+    } : null;
 
     res.json({
       generatedAt: new Date().toISOString(),
@@ -392,6 +447,7 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
         topProgressions,
         topRankGains,
         topRankDrops,
+        mvp24h,
       },
     });
   } catch (error) {

@@ -171,6 +171,7 @@
 </div>
 
 <script>
+
 // ── Dept filter pills ─────────────────────────────────────────────────────
 function setActivePill(dept) {
   document.querySelectorAll('.dept-tab').forEach(p => {
@@ -485,18 +486,29 @@ document.getElementById('dept-filters').addEventListener('click', e => {
     drawText(ctx, `Résumé e-SCM des dernières 24h · généré le ${formatShortDate(data.generatedAt)}`, 96, 208, { size: 28, color: '#94A3B8' });
 
     const k = data.progress24h || {};
+    const mvp = k.mvp24h || null;
+    fillRoundRect(ctx, 96, 300, 760, 170, 28, 'rgba(17,24,39,.90)');
+    drawText(ctx, '🏆 MVP 24h e-SCM', 132, 326, { size: 26, color: '#C084FC', weight: 900 });
+    drawText(ctx, mvp?.pseudo || 'Pas assez de données', 132, 366, { size: 54, color: '#F1F5F9', weight: 900, maxWidth: 410 });
+    if (mvp) {
+      drawText(ctx, `#${mvp.currentRank || '—'} · ${formatNumber(mvp.currentPoints)} pts`, 590, 374, { size: 26, color: '#94A3B8', weight: 800 });
+      drawText(ctx, `${mvp.pointsDelta >= 0 ? '+' : ''}${formatNumber(mvp.pointsDelta)} pts · ${mvp.rankDelta >= 0 ? '+' : ''}${mvp.rankDelta} pl.`, 590, 410, { size: 26, color: '#22C55E', weight: 900 });
+      drawText(ctx, mvp.summary, 132, 430, { size: 22, color: '#94A3B8', weight: 650, maxWidth: 670 });
+    } else {
+      drawText(ctx, 'Deux snapshots sont nécessaires pour élire le MVP 24h.', 132, 430, { size: 22, color: '#94A3B8', weight: 650, maxWidth: 670 });
+    }
+
     const cards = [
       ['Joueurs e-SCM', data.escmPlayerCount, `sur ${data.totalPlayers} joueurs`],
-      ['Points gagnés 24h', `+${formatNumber(k.totalPointsDelta)}`, `${k.scorers || 0} scoreurs`],
+      ['Points gagnés', `+${formatNumber(k.totalPointsDelta)}`, `${k.scorers || 0} scoreurs`],
       ['Actifs 24h', k.activePlayers || 0, `${k.playerCount || 0} suivis`],
-      ['Meilleur rush', `+${formatNumber(k.bestPointsDelta)}`, `${k.bestRankDelta || 0} place(s) max`],
     ];
     cards.forEach((card, i) => {
-      const x = 96 + i * 402;
-      fillRoundRect(ctx, x, 300, 360, 170, 28, 'rgba(17,24,39,.88)');
-      drawText(ctx, card[0], x + 30, 326, { size: 24, color: '#94A3B8', weight: 700 });
-      drawText(ctx, card[1], x + 30, 368, { size: 50, color: i === 1 ? '#22C55E' : '#F1F5F9', weight: 900 });
-      drawText(ctx, card[2], x + 30, 430, { size: 22, color: '#64748B', weight: 600 });
+      const x = 896 + i * 270;
+      fillRoundRect(ctx, x, 300, 248, 170, 28, 'rgba(17,24,39,.88)');
+      drawText(ctx, card[0], x + 24, 326, { size: 22, color: '#94A3B8', weight: 700 });
+      drawText(ctx, card[1], x + 24, 368, { size: 42, color: i === 1 ? '#22C55E' : '#F1F5F9', weight: 900, maxWidth: 205 });
+      drawText(ctx, card[2], x + 24, 430, { size: 20, color: '#64748B', weight: 600 });
     });
 
     fillRoundRect(ctx, 96, 530, 820, 1260, 32, 'rgba(17,24,39,.92)');
