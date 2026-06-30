@@ -613,6 +613,7 @@ input, select, textarea {
 
   .mpp-nav-links {
     position: relative;
+    display: flex !important;
     align-items: center;
     gap: 4px !important;
     padding: 4px;
