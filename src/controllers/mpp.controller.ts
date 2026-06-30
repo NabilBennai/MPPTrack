@@ -379,7 +379,7 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
       .filter((movement) => movement.currentDepartmentRank !== null && movement.rankDelta < 0)
       .sort((a, b) => a.rankDelta - b.rankDelta || a.pointsDelta - b.pointsDelta)
       .slice(0, 8);
-    const mvpCandidate = [...movementRows]
+    const mvpCandidates = [...movementRows]
       .filter((movement) => movement.currentDepartmentRank !== null && movement.currentPoints !== null)
       .map((movement) => {
         const enteredTop10 = movement.currentDepartmentRank !== null
@@ -395,28 +395,30 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
         return { ...movement, enteredTop10, enteredTop5, score };
       })
       .sort((a, b) => b.score - a.score
-        || b.pointsDelta - a.pointsDelta
-        || b.rankDelta - a.rankDelta
-        || (a.currentDepartmentRank ?? Number.MAX_SAFE_INTEGER) - (b.currentDepartmentRank ?? Number.MAX_SAFE_INTEGER))[0] ?? null;
-    const mvp24h = mvpCandidate ? {
-      pseudo: mvpCandidate.pseudo,
-      currentRank: mvpCandidate.currentDepartmentRank,
-      currentPoints: mvpCandidate.currentPoints,
-      pointsDelta: mvpCandidate.pointsDelta,
-      rankDelta: mvpCandidate.rankDelta,
-      summary: buildMvp24hSummary({
-        pseudo: mvpCandidate.pseudo,
-        pointsDelta: mvpCandidate.pointsDelta,
-        rankDelta: mvpCandidate.rankDelta,
-        enteredTop5: mvpCandidate.enteredTop5,
-        enteredTop10: mvpCandidate.enteredTop10,
-      }),
-      badges: {
-        rankGain: mvpCandidate.rankDelta > 0,
-        enteredTop10: mvpCandidate.enteredTop10,
-        enteredTop5: mvpCandidate.enteredTop5,
-      },
-    } : null;
+        || (a.currentDepartmentRank ?? Number.MAX_SAFE_INTEGER) - (b.currentDepartmentRank ?? Number.MAX_SAFE_INTEGER));
+    const bestMvpScore = mvpCandidates[0]?.score ?? null;
+    const mvp24h = bestMvpScore === null ? [] : mvpCandidates
+      .filter((candidate) => candidate.score === bestMvpScore)
+      .map((candidate) => ({
+        pseudo: candidate.pseudo,
+        currentRank: candidate.currentDepartmentRank,
+        currentPoints: candidate.currentPoints,
+        pointsDelta: candidate.pointsDelta,
+        rankDelta: candidate.rankDelta,
+        score: candidate.score,
+        summary: buildMvp24hSummary({
+          pseudo: candidate.pseudo,
+          pointsDelta: candidate.pointsDelta,
+          rankDelta: candidate.rankDelta,
+          enteredTop5: candidate.enteredTop5,
+          enteredTop10: candidate.enteredTop10,
+        }),
+        badges: {
+          rankGain: candidate.rankDelta > 0,
+          enteredTop10: candidate.enteredTop10,
+          enteredTop5: candidate.enteredTop5,
+        },
+      }));
 
     res.json({
       generatedAt: new Date().toISOString(),

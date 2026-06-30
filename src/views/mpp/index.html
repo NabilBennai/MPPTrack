@@ -486,14 +486,17 @@ document.getElementById('dept-filters').addEventListener('click', e => {
     drawText(ctx, `Résumé e-SCM des dernières 24h · généré le ${formatShortDate(data.generatedAt)}`, 96, 208, { size: 28, color: '#94A3B8' });
 
     const k = data.progress24h || {};
-    const mvp = k.mvp24h || null;
+    const mvps = Array.isArray(k.mvp24h) ? k.mvp24h : (k.mvp24h ? [k.mvp24h] : []);
+    const mvp = mvps[0] || null;
+    const mvpNames = mvps.slice(0, 5).map(p => `#${p.currentRank || '—'} ${p.pseudo}`).join(' · ');
+    const extraMvpCount = Math.max(0, mvps.length - 5);
     fillRoundRect(ctx, 96, 300, 760, 170, 28, 'rgba(17,24,39,.90)');
-    drawText(ctx, '🏆 MVP 24h e-SCM', 132, 326, { size: 26, color: '#C084FC', weight: 900 });
-    drawText(ctx, mvp?.pseudo || 'Pas assez de données', 132, 366, { size: 54, color: '#F1F5F9', weight: 900, maxWidth: 410 });
+    drawText(ctx, mvps.length > 1 ? `🏆 MVP 24h e-SCM · égalité x${mvps.length}` : '🏆 MVP 24h e-SCM', 132, 326, { size: 26, color: '#C084FC', weight: 900 });
+    drawText(ctx, mvps.length > 1 ? 'MVP ex æquo' : (mvp?.pseudo || 'Pas assez de données'), 132, 366, { size: 54, color: '#F1F5F9', weight: 900, maxWidth: 410 });
     if (mvp) {
-      drawText(ctx, `#${mvp.currentRank || '—'} · ${formatNumber(mvp.currentPoints)} pts`, 590, 374, { size: 26, color: '#94A3B8', weight: 800 });
-      drawText(ctx, `${mvp.pointsDelta >= 0 ? '+' : ''}${formatNumber(mvp.pointsDelta)} pts · ${mvp.rankDelta >= 0 ? '+' : ''}${mvp.rankDelta} pl.`, 590, 410, { size: 26, color: '#22C55E', weight: 900 });
-      drawText(ctx, mvp.summary, 132, 430, { size: 22, color: '#94A3B8', weight: 650, maxWidth: 670 });
+      drawText(ctx, mvps.length > 1 ? 'Triés par classement e-SCM' : `#${mvp.currentRank || '—'} · ${formatNumber(mvp.currentPoints)} pts`, 590, 374, { size: 26, color: '#94A3B8', weight: 800 });
+      drawText(ctx, mvps.length > 1 ? `Score MVP ${formatNumber(mvp.score)}` : `${mvp.pointsDelta >= 0 ? '+' : ''}${formatNumber(mvp.pointsDelta)} pts · ${mvp.rankDelta >= 0 ? '+' : ''}${mvp.rankDelta} pl.`, 590, 410, { size: 26, color: '#22C55E', weight: 900 });
+      drawText(ctx, mvps.length > 1 ? `${mvpNames}${extraMvpCount ? ` · +${extraMvpCount}` : ''}` : mvp.summary, 132, 430, { size: 22, color: '#94A3B8', weight: 650, maxWidth: 670 });
     } else {
       drawText(ctx, 'Deux snapshots sont nécessaires pour élire le MVP 24h.', 132, 430, { size: 22, color: '#94A3B8', weight: 650, maxWidth: 670 });
     }
