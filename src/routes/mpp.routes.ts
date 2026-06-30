@@ -14,6 +14,7 @@ import {
   mppEventsHandler,
   mppFormRankingHandler,
   mppMovementsHandler,
+  mppMvp24hHandler,
   mppRivalryReportHandler,
   mppSnapshotCronHandler,
   mppDuelPageHandler,
@@ -43,6 +44,7 @@ router.get("/api/events",          mppEventsHandler);
 router.get("/api/duel",            mppDuelDataHandler);
 router.get("/api/duel/players",    mppDuelPlayersHandler);
 router.get("/api/movements",       mppMovementsHandler);
+router.get("/api/mvp24h",          mppMvp24hHandler);
 router.get("/api/rivalry-report",  mppRivalryReportHandler);
 router.get("/api/form-ranking",    mppFormRankingHandler);
 router.get("/api/distributions",   mppDepartmentDistributionsHandler);
