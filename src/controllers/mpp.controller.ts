@@ -280,6 +280,61 @@ export async function mppRivalryReportHandler(req: Request, res: Response): Prom
 }
 
 
+
+export async function mppPlayerExportCardHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params as { id: string };
+    const players = await getMppClassement();
+    const player = players.find((p) => p.id === id);
+    if (!player) {
+      res.status(404).json({ error: "Joueur introuvable." });
+      return;
+    }
+
+    const departmentPlayers = players
+      .filter((candidate) => candidate.departmentCode === player.departmentCode)
+      .sort((a, b) => a.rank - b.rank);
+    const departmentRank = departmentPlayers.findIndex((candidate) => candidate.id === player.id) + 1;
+    const movements = await getStandingsMovements(24).catch(() => null);
+    const movement = movements?.movements.find((row) => row.playerId === player.id) ?? null;
+    const history = await getHistoryDashboard("7d", [player.id]).catch(() => null);
+    const series = history?.series.find((row) => row.playerId === player.id) ?? null;
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      contestTitle: history?.contestTitle ?? movements?.contestTitle ?? "MPP",
+      player: {
+        id: player.id,
+        pseudo: player.pseudo,
+        departmentCode: player.departmentCode,
+        departmentName: player.departmentName,
+        globalRank: player.rank,
+        departmentRank: departmentRank || null,
+        points: player.points,
+        delta24h: movement?.pointsDelta ?? series?.pointsChange ?? 0,
+        rankDelta24h: movement?.rankDelta ?? 0,
+        exactScores: player.exactScores ?? 0,
+        goodResults: player.goodResults ?? 0,
+        playedPredictions: player.playedPredictions ?? 0,
+        avatarUrl: player.avatarUrl ?? null,
+      },
+      history: {
+        firstCapturedAt: history?.firstCapturedAt ?? null,
+        lastCapturedAt: history?.lastCapturedAt ?? null,
+        positions: (series?.positions ?? []).slice(-8).map((point) => ({
+          capturedAt: point.capturedAt,
+          globalRank: point.globalRank,
+          departmentRank: point.escmRank,
+          points: point.points,
+        })),
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Export joueur indisponible.";
+    res.status(500).json({ error: message });
+  }
+}
+
 export async function mppGigaExportDataHandler(_req: Request, res: Response): Promise<void> {
   try {
     const players = await getMppClassement();

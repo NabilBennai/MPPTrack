@@ -246,6 +246,7 @@ export function renderPlayerExpandRow(player: MppPlayer): string {
               <div style="margin-top:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 ${deptBadge(player.departmentCode, player.departmentName)}
                 <a href="/duel?playerA=${encodeURIComponent(player.pseudo)}" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#22C55E;text-decoration:none;padding:3px 8px;border-radius:999px;background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.28)">Comparer</a>
+                <button type="button" onclick="exportPlayerPNG('${esc(player.id)}', this)" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#C084FC;text-decoration:none;padding:3px 8px;border-radius:999px;background:rgba(168,85,247,.10);border:1px solid rgba(168,85,247,.28);cursor:pointer;font-family:'Manrope',sans-serif">PNG</button>
               </div>
             </div>
           </div>
