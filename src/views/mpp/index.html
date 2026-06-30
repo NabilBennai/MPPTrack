@@ -581,6 +581,108 @@ document.getElementById('dept-filters').addEventListener('click', e => {
     return canvas;
   }
 
+
+  function deptAccent(code) {
+    return ({ MT: '#3B9EFF', ES: '#A855F7', TD: '#22C55E', WD: '#F97316' })[code] || '#64748B';
+  }
+
+  function drawPlayerCard(data) {
+    const player = data.player || {};
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 675;
+    const ctx = canvas.getContext('2d');
+    const accent = deptAccent(player.departmentCode);
+    ctx.fillStyle = '#0C1320';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, 'rgba(34,197,94,.20)');
+    grad.addColorStop(.45, 'rgba(17,24,39,.92)');
+    grad.addColorStop(1, `${accent}33`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    fillRoundRect(ctx, 52, 48, 1096, 579, 34, 'rgba(17,24,39,.90)');
+    ctx.strokeStyle = 'rgba(148,163,184,.18)';
+    ctx.lineWidth = 2;
+    drawRoundRect(ctx, 52, 48, 1096, 579, 34);
+    ctx.stroke();
+
+    drawText(ctx, 'MPP TRACK · CARTE JOUEUR', 88, 82, { size: 24, weight: 900, color: '#22C55E' });
+    drawText(ctx, data.contestTitle || 'MPP', 88, 116, { size: 24, weight: 700, color: '#94A3B8', maxWidth: 650 });
+    drawText(ctx, formatShortDate(data.generatedAt), 1112, 86, { size: 20, weight: 700, color: '#64748B', align: 'right' });
+
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(145, 235, 54, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#111827';
+    ctx.beginPath();
+    ctx.arc(145, 235, 46, 0, Math.PI * 2);
+    ctx.fill();
+    drawText(ctx, String(player.pseudo || '?').replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase() || '??', 145, 210, { size: 38, weight: 900, color: accent, align: 'center' });
+
+    drawText(ctx, player.pseudo || 'Joueur', 220, 190, { size: 58, weight: 900, maxWidth: 590 });
+    drawText(ctx, `${player.departmentName || player.departmentCode || 'Département'} · #${player.departmentRank || '—'} département · #${player.globalRank || '—'} global`, 224, 260, { size: 25, weight: 800, color: '#94A3B8', maxWidth: 760 });
+
+    const delta = Number(player.delta24h || 0);
+    const deltaText = `${delta >= 0 ? '+' : ''}${formatNumber(delta)} pts`;
+    const statCards = [
+      ['Points', formatNumber(player.points), 'total actuel', '#F1F5F9'],
+      ['Delta 24h', deltaText, `${player.rankDelta24h >= 0 ? '+' : ''}${player.rankDelta24h || 0} place(s)`, delta >= 0 ? '#22C55E' : '#F97316'],
+      ['Scores exacts', formatNumber(player.exactScores), `${player.playedPredictions || 0} joués`, accent],
+      ['Bons pronos', formatNumber(player.goodResults), `${player.playedPredictions || 0} joués`, '#F1F5F9'],
+    ];
+    statCards.forEach((card, i) => {
+      const x = 88 + i * 256;
+      fillRoundRect(ctx, x, 340, 232, 138, 22, 'rgba(12,19,32,.72)');
+      drawText(ctx, card[0], x + 22, 362, { size: 19, color: '#94A3B8', weight: 800 });
+      drawText(ctx, card[1], x + 22, 397, { size: 36, color: card[3], weight: 900, maxWidth: 190 });
+      drawText(ctx, card[2], x + 22, 444, { size: 17, color: '#64748B', weight: 700 });
+    });
+
+    const history = data.history?.positions || [];
+    drawText(ctx, 'Historique court', 88, 528, { size: 24, weight: 900 });
+    if (history.length >= 2) {
+      const values = history.map(p => Number(p.points || 0));
+      const min = Math.min(...values), max = Math.max(...values);
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      history.forEach((point, i) => {
+        const x = 300 + i * (760 / Math.max(1, history.length - 1));
+        const y = 575 - ((Number(point.points || 0) - min) / Math.max(1, max - min)) * 70;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      drawText(ctx, `${formatNumber(values[0])} → ${formatNumber(values[values.length - 1])} pts`, 300, 530, { size: 22, color: '#94A3B8', weight: 800 });
+    } else {
+      drawText(ctx, 'Pas assez de snapshots disponibles pour tracer une tendance.', 300, 548, { size: 22, color: '#64748B', weight: 700 });
+    }
+    drawText(ctx, 'mpptrack · partage PNG', 600, 612, { size: 19, color: '#64748B', align: 'center', weight: 700 });
+    return canvas;
+  }
+
+  window.exportPlayerPNG = async function (playerId, button) {
+    const original = button?.textContent;
+    try {
+      if (button) { button.disabled = true; button.textContent = '…'; }
+      showToast('🖼️ Préparation de la carte joueur…');
+      const response = await fetch(`/api/player/${encodeURIComponent(playerId)}/export-card`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Carte joueur indisponible');
+      const canvas = drawPlayerCard(data);
+      const safeName = String(data.player?.pseudo || 'joueur').toLowerCase().replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') || 'joueur';
+      downloadCanvas(canvas, `mpp-${safeName}-card-${new Date().toISOString().slice(0,10)}.png`);
+      showToast('✅ Carte joueur PNG téléchargée !');
+    } catch (error) {
+      showToast('❌ ' + (error?.message || 'Export joueur impossible'));
+    } finally {
+      if (button) { button.disabled = false; button.textContent = original || 'PNG'; }
+    }
+  };
+
   window.exportGigaPNG = async function (button) {
     const original = button?.textContent;
     try {
