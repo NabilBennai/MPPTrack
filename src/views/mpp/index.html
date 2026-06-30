@@ -45,6 +45,38 @@
     </div>
   </div>
 
+  <!-- MVP 24h board -->
+  <section id="mvp24h-board" style="flex-shrink:0;border-radius:18px;border:1px solid rgba(168,85,247,.20);background:linear-gradient(135deg,rgba(168,85,247,.16),rgba(17,24,39,.92) 44%,rgba(34,197,94,.10));padding:16px;box-shadow:0 14px 38px rgba(0,0,0,.28);overflow:hidden;position:relative">
+    <div style="position:absolute;right:-40px;top:-70px;width:220px;height:220px;border-radius:999px;background:rgba(168,85,247,.16);filter:blur(2px)"></div>
+    <div style="position:relative;display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(96px,.45fr));gap:12px;align-items:stretch">
+      <article id="mvp24h-card" style="min-height:126px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(12,19,32,.72);padding:16px;display:flex;gap:14px;align-items:center">
+        <div style="width:76px;height:76px;border-radius:22px;background:linear-gradient(135deg,#A855F7,#22C55E);display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 12px 28px rgba(168,85,247,.24)">🏆</div>
+        <div style="min-width:0;flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-size:11px;font-family:'Manrope',sans-serif;font-weight:900;letter-spacing:.14em;color:#C084FC;text-transform:uppercase">MVP 24h e-SCM</span>
+            <span id="mvp24h-badge" style="border-radius:999px;padding:3px 8px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.26);color:#22C55E;font-size:10px;font-weight:900;font-family:'Manrope',sans-serif">Calcul…</span>
+          </div>
+          <h2 id="mvp24h-pseudo" class="font-oswald" style="margin:0;color:#F8FAFC;font-size:36px;line-height:1;font-weight:900;letter-spacing:.02em">Chargement…</h2>
+          <p id="mvp24h-summary" style="margin:8px 0 0;color:#94A3B8;font-size:13px;font-weight:600;font-family:'Manrope',sans-serif;line-height:1.35">Analyse des mouvements sur les dernières 24h.</p>
+        </div>
+      </article>
+      <div class="mvp24h-stat" style="border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(17,24,39,.78);padding:14px">
+        <div style="color:#64748B;font-size:11px;font-weight:800;font-family:'Manrope',sans-serif;text-transform:uppercase">Rang actuel</div>
+        <div id="mvp24h-rank" style="margin-top:10px;color:#F1F5F9;font-size:30px;font-weight:900;font-family:'Manrope',sans-serif">—</div>
+      </div>
+      <div class="mvp24h-stat" style="border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(17,24,39,.78);padding:14px">
+        <div style="color:#64748B;font-size:11px;font-weight:800;font-family:'Manrope',sans-serif;text-transform:uppercase">Points</div>
+        <div id="mvp24h-points" style="margin-top:10px;color:#F1F5F9;font-size:30px;font-weight:900;font-family:'Manrope',sans-serif">—</div>
+      </div>
+      <div class="mvp24h-stat" style="border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(17,24,39,.78);padding:14px">
+        <div style="color:#64748B;font-size:11px;font-weight:800;font-family:'Manrope',sans-serif;text-transform:uppercase">Delta 24h</div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">
+          <span id="mvp24h-points-delta" style="color:#22C55E;font-size:26px;font-weight:900;font-family:'Manrope',sans-serif">—</span>
+          <span id="mvp24h-rank-delta" style="color:#C084FC;font-size:13px;font-weight:800;font-family:'Manrope',sans-serif">—</span>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- Classement section -->
   <div class="ranking-section" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0">
@@ -171,6 +203,31 @@
 </div>
 
 <script>
+// ── MVP 24h board ─────────────────────────────────────────────────────────
+(async function loadMvp24h() {
+  const fmt = value => Number(value || 0).toLocaleString('fr-FR');
+  const signed = value => `${Number(value || 0) >= 0 ? '+' : ''}${fmt(value)}`;
+  try {
+    const response = await fetch('/api/mvp24h');
+    if (!response.ok) throw new Error('MVP indisponible');
+    const data = await response.json();
+    const mvp = data.mvp;
+    if (!mvp) throw new Error('Aucun mouvement exploitable');
+    document.getElementById('mvp24h-pseudo').textContent = mvp.pseudo;
+    document.getElementById('mvp24h-summary').textContent = mvp.summary;
+    document.getElementById('mvp24h-rank').textContent = mvp.currentRank ? `#${mvp.currentRank}` : '—';
+    document.getElementById('mvp24h-points').textContent = fmt(mvp.currentPoints);
+    document.getElementById('mvp24h-points-delta').textContent = `${signed(mvp.pointsDelta)} pts`;
+    document.getElementById('mvp24h-rank-delta').textContent = `${signed(mvp.rankDelta)} rang${Math.abs(mvp.rankDelta) > 1 ? 's' : ''}`;
+    const badge = document.getElementById('mvp24h-badge');
+    badge.textContent = mvp.badges?.enteredTop5 ? 'Top 5' : mvp.badges?.enteredTop10 ? 'Top 10' : mvp.badges?.rankGain ? 'Rang gagné' : 'Meilleur score';
+  } catch (error) {
+    document.getElementById('mvp24h-badge').textContent = 'Indisponible';
+    document.getElementById('mvp24h-pseudo').textContent = 'MVP à venir';
+    document.getElementById('mvp24h-summary').textContent = error instanceof Error ? error.message : 'Impossible de charger le MVP 24h.';
+  }
+})();
+
 // ── Dept filter pills ─────────────────────────────────────────────────────
 function setActivePill(dept) {
   document.querySelectorAll('.dept-tab').forEach(p => {
