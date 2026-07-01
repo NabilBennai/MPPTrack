@@ -26,6 +26,7 @@ import {
   mppDuelPlayersHandler,
   mppGigaExportDataHandler,
   mppPlayerExportCardHandler,
+  mppNarrative24hHandler,
 } from "../controllers/mpp.controller.js";
 
 const router = Router();
@@ -47,6 +48,7 @@ router.get("/api/rivalry-report",  mppRivalryReportHandler);
 router.get("/api/form-ranking",    mppFormRankingHandler);
 router.get("/api/distributions",   mppDepartmentDistributionsHandler);
 router.get("/api/giga-export",      mppGigaExportDataHandler);
+router.get("/narrative24h",          mppNarrative24hHandler);
 router.get("/api/player/:id/export-card", mppPlayerExportCardHandler);
 router.get("/api/cron/snapshot",   mppSnapshotCronHandler);
 router.get("/classement",          mppClassementHandler);

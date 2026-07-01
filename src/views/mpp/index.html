@@ -45,6 +45,18 @@
     </div>
   </div>
 
+  <!-- Narrative 24h -->
+  <section aria-labelledby="narrative24h-title" style="flex-shrink:0;border-radius:14px;border:1px solid rgba(34,197,94,.16);background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(15,23,42,.88));padding:12px;box-shadow:0 2px 10px rgba(0,0,0,.22)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+      <span aria-hidden="true" style="width:25px;height:25px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(34,197,94,.14);font-size:14px">💡</span>
+      <h2 id="narrative24h-title" class="font-oswald" style="margin:0;color:#F1F5F9;font-size:15px;letter-spacing:.08em;text-transform:uppercase">Ce qu’il faut retenir</h2>
+      <span style="margin-left:auto;color:#64748B;font-size:11px;font-weight:700;font-family:'Manrope',sans-serif">24h e-SCM</span>
+    </div>
+    <div id="narrative24h-container" hx-get="/narrative24h" hx-trigger="load" hx-swap="innerHTML">
+      <div style="height:46px;border-radius:11px" class="shimmer"></div>
+    </div>
+  </section>
+
 
   <!-- Classement section -->
   <div class="ranking-section" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0">

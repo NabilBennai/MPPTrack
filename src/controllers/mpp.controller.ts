@@ -41,6 +41,76 @@ function formatDate(): string {
   });
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function pluralize(value: number, singular: string, plural = `${singular}s`): string {
+  return `${value} ${value > 1 ? plural : singular}`;
+}
+
+function formatSignedPoints(value: number): string {
+  return `${value > 0 ? "+" : ""}${value} point${Math.abs(value) > 1 ? "s" : ""}`;
+}
+
+function renderNarrative24h(sentences: string[]): string {
+  const icons = ["🏆", "🔥", "↗️", "⚡", "📏"];
+  return `<ul style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin:0;padding:0;list-style:none">${sentences.map((sentence, index) => `
+    <li style="display:flex;gap:9px;align-items:flex-start;padding:10px 11px;border-radius:11px;background:rgba(15,23,42,.7);border:1px solid rgba(148,163,184,.09)">
+      <span aria-hidden="true" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(34,197,94,.10);font-size:13px;flex-shrink:0">${icons[index] ?? "•"}</span>
+      <span style="color:#CBD5E1;font-size:12px;line-height:1.45;font-family:'Manrope',sans-serif">${escapeHtml(sentence)}</span>
+    </li>`).join("")}
+  </ul>`;
+}
+
+function buildNarrative24h(data: Awaited<ReturnType<typeof getStandingsMovements>>): string[] {
+  const ranked = data.movements
+    .filter((movement) => movement.currentDepartmentRank !== null && movement.currentPoints !== null)
+    .sort((a, b) => (a.currentDepartmentRank ?? 0) - (b.currentDepartmentRank ?? 0));
+  const leader = ranked[0] ?? null;
+  const runnerUp = ranked[1] ?? null;
+  const pointGainers = data.movements.filter((movement) => movement.pointsDelta > 0);
+  const activePlayers = data.movements.filter((movement) => movement.pointsDelta !== 0 || movement.rankDelta !== 0);
+  const totalPointsGained = pointGainers.reduce((sum, movement) => sum + movement.pointsDelta, 0);
+  const bestPointsGain = [...pointGainers]
+    .sort((a, b) => b.pointsDelta - a.pointsDelta || b.rankDelta - a.rankDelta || a.pseudo.localeCompare(b.pseudo, "fr"))[0] ?? null;
+  const bestRankGain = data.movements
+    .filter((movement) => movement.rankDelta > 0)
+    .sort((a, b) => b.rankDelta - a.rankDelta || b.pointsDelta - a.pointsDelta || a.pseudo.localeCompare(b.pseudo, "fr"))[0] ?? null;
+
+  const sentences: string[] = [];
+  if (leader) {
+    sentences.push(`${leader.pseudo} mène actuellement le classement e-SCM avec ${pluralize(leader.currentPoints ?? 0, "point")}.`);
+  } else {
+    sentences.push("Le leader e-SCM est indisponible tant qu'aucun instantané récent n'est chargé.");
+  }
+
+  if (bestPointsGain) {
+    sentences.push(`${bestPointsGain.pseudo} signe le meilleur gain sur 24h avec ${formatSignedPoints(bestPointsGain.pointsDelta)}.`);
+  } else {
+    sentences.push("Aucun gain de points positif n'est détecté sur les dernières 24h.");
+  }
+
+  if (bestRankGain) {
+    sentences.push(`${bestRankGain.pseudo} réalise la meilleure montée de rang avec ${pluralize(bestRankGain.rankDelta, "place")} gagnée${bestRankGain.rankDelta > 1 ? "s" : ""}.`);
+  } else {
+    sentences.push("Aucune montée de rang n'est détectée sur cette fenêtre de 24h.");
+  }
+
+  sentences.push(`${pluralize(activePlayers.length, "joueur")} actif${activePlayers.length > 1 ? "s" : ""} sur ${pluralize(data.playerCount, "joueur")} e-SCM, pour ${pluralize(totalPointsGained, "point")} gagné${totalPointsGained > 1 ? "s" : ""} au total.`);
+
+  if (leader && runnerUp) {
+    const gap = (leader.currentPoints ?? 0) - (runnerUp.currentPoints ?? 0);
+    sentences.push(`L'écart entre #1 et #2 est de ${pluralize(gap, "point")} entre ${leader.pseudo} et ${runnerUp.pseudo}.`);
+  }
+
+  return sentences.slice(0, 5);
+}
+
 // ---------------------------------------------------------------------------
 // Page principale
 // ---------------------------------------------------------------------------
@@ -280,6 +350,15 @@ export async function mppRivalryReportHandler(req: Request, res: Response): Prom
 }
 
 
+export async function mppNarrative24hHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const movements = await getStandingsMovements(24);
+    res.send(renderNarrative24h(buildNarrative24h(movements)));
+  } catch (_error) {
+    res.status(500).send(renderNarrative24h(["Le résumé des dernières 24h est momentanément indisponible."]));
+  }
+}
+
 
 export async function mppPlayerExportCardHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -347,6 +426,7 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
     const movements = await getStandingsMovements(24).catch(() => null);
     const contestInfo = useMock() ? null : await getContestInfo().catch(() => null);
 
+    const narrative24h = movements ? buildNarrative24h(movements) : ["Le résumé des dernières 24h est momentanément indisponible."];
     const movementRows = movements?.movements ?? [];
     const activeMovements = movementRows.filter((movement) => movement.pointsDelta !== 0 || movement.rankDelta !== 0);
     const positiveMovements = movementRows.filter((movement) => movement.pointsDelta > 0);
@@ -380,6 +460,7 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
       distributions,
       escmDistribution,
       departmentStats: stats,
+      narrative24h,
       progress24h: {
         previousCapturedAt: movements?.previousCapturedAt ?? null,
         currentCapturedAt: movements?.currentCapturedAt ?? null,
