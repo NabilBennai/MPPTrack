@@ -380,7 +380,7 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
       .sort((a, b) => a.rankDelta - b.rankDelta || a.pointsDelta - b.pointsDelta)
       .slice(0, 8);
     const mvpCandidates = [...movementRows]
-      .filter((movement) => movement.currentDepartmentRank !== null && movement.currentPoints !== null)
+      .filter((movement) => movement.currentDepartmentRank !== null && movement.currentPoints !== null && movement.pseudo)
       .map((movement) => {
         const enteredTop10 = movement.currentDepartmentRank !== null
           && movement.currentDepartmentRank <= 10
@@ -388,8 +388,10 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
         const enteredTop5 = movement.currentDepartmentRank !== null
           && movement.currentDepartmentRank <= 5
           && (movement.previousDepartmentRank === null || movement.previousDepartmentRank > 5);
-        const score = movement.pointsDelta * 100
-          + (movement.rankDelta > 0 ? movement.rankDelta * 10 : 0)
+        const pointsDelta = movement.pointsDelta ?? 0;
+        const rankDelta = movement.rankDelta ?? 0;
+        const score = pointsDelta * 100
+          + (rankDelta > 0 ? rankDelta * 10 : 0)
           + (enteredTop10 ? 25 : 0)
           + (enteredTop5 ? 50 : 0);
         return { ...movement, enteredTop10, enteredTop5, score };
@@ -403,18 +405,18 @@ export async function mppGigaExportDataHandler(_req: Request, res: Response): Pr
         pseudo: candidate.pseudo,
         currentRank: candidate.currentDepartmentRank,
         currentPoints: candidate.currentPoints,
-        pointsDelta: candidate.pointsDelta,
-        rankDelta: candidate.rankDelta,
+        pointsDelta: candidate.pointsDelta ?? 0,
+        rankDelta: candidate.rankDelta ?? 0,
         score: candidate.score,
         summary: buildMvp24hSummary({
           pseudo: candidate.pseudo,
-          pointsDelta: candidate.pointsDelta,
-          rankDelta: candidate.rankDelta,
+          pointsDelta: candidate.pointsDelta ?? 0,
+          rankDelta: candidate.rankDelta ?? 0,
           enteredTop5: candidate.enteredTop5,
           enteredTop10: candidate.enteredTop10,
         }),
         badges: {
-          rankGain: candidate.rankDelta > 0,
+          rankGain: (candidate.rankDelta ?? 0) > 0,
           enteredTop10: candidate.enteredTop10,
           enteredTop5: candidate.enteredTop5,
         },
