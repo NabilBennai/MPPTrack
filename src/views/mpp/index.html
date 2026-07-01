@@ -486,7 +486,19 @@ document.getElementById('dept-filters').addEventListener('click', e => {
     drawText(ctx, `Résumé e-SCM des dernières 24h · généré le ${formatShortDate(data.generatedAt)}`, 96, 208, { size: 28, color: '#94A3B8' });
 
     const k = data.progress24h || {};
-    const rawMvps = Array.isArray(k.mvp24h) ? k.mvp24h : (k.mvp24h ? [k.mvp24h] : []);
+    const rawMvpsFromPayload = Array.isArray(k.mvp24h) ? k.mvp24h : (k.mvp24h ? [k.mvp24h] : []);
+    const fallbackMvpCandidates = (k.topProgressions || [])
+      .filter(p => p && typeof p.pseudo === 'string' && p.pseudo.trim() && p.currentDepartmentRank)
+      .map(p => {
+        const pointsDelta = Number(p.pointsDelta || 0);
+        const rankDelta = Number(p.rankDelta || 0);
+        const enteredTop10 = Number(p.currentDepartmentRank || 0) <= 10 && (!p.previousDepartmentRank || Number(p.previousDepartmentRank) > 10);
+        const enteredTop5 = Number(p.currentDepartmentRank || 0) <= 5 && (!p.previousDepartmentRank || Number(p.previousDepartmentRank) > 5);
+        return { ...p, currentRank: p.currentDepartmentRank, score: pointsDelta * 100 + (rankDelta > 0 ? rankDelta * 10 : 0) + (enteredTop10 ? 25 : 0) + (enteredTop5 ? 50 : 0) };
+      })
+      .sort((a, b) => b.score - a.score || (a.currentRank || 9999) - (b.currentRank || 9999));
+    const bestFallbackMvpScore = fallbackMvpCandidates[0]?.score;
+    const rawMvps = rawMvpsFromPayload.length ? rawMvpsFromPayload : fallbackMvpCandidates.filter(p => p.score === bestFallbackMvpScore);
     const mvps = rawMvps.filter(p => p && typeof p.pseudo === 'string' && p.pseudo.trim());
     const mvp = mvps[0] || null;
     const mvpNames = mvps.slice(0, 5).map(p => `#${p.currentRank || '—'} ${p.pseudo}`).join(' · ');
